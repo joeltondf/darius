@@ -173,31 +173,44 @@ async function captureVideos() {
   allVideos = [];
   
   const videoElements = document.querySelectorAll('ytd-video-renderer, ytd-grid-video-renderer, ytd-rich-item-renderer');
+  console.log(`[Filtros] Encontrou ${videoElements.length} elementos de vídeo na página`);
   
   const videoDataPromises = [];
   
-  videoElements.forEach(element => {
+  videoElements.forEach((element, index) => {
     const video = extractVideoData(element);
     if (video) {
       allVideos.push(video);
+      console.log(`[Filtros] Vídeo #${index + 1}: "${video.title}" - Assinantes: ${video.subscribers !== null ? video.subscribers : 'null (não encontrado)'}`);
       
       if (video.channelUrl && video.subscribers === null) {
-        videoDataPromises.push(
-          fetchSubscriberCount(video.channelUrl).then(subs => {
-            video.subscribers = subs;
-          })
-        );
+        if (YOUTUBE_API_KEY) {
+          console.log(`[Filtros] Buscando assinantes via API para: ${video.channelName}`);
+          videoDataPromises.push(
+            fetchSubscriberCount(video.channelUrl).then(subs => {
+              video.subscribers = subs;
+              if (subs !== null) {
+                console.log(`[Filtros] ✓ API retornou ${subs} assinantes para ${video.channelName}`);
+              }
+            })
+          );
+        } else {
+          console.log(`[Filtros] ⚠️ API Key não configurada - configure em chrome://extensions > Filtros > Opções`);
+        }
       }
     }
   });
   
-  console.log(`Captured ${allVideos.length} videos`);
+  console.log(`[Filtros] ✓ Capturou ${allVideos.length} vídeos`);
   applyFilters();
   
-  if (videoDataPromises.length > 0) {
+  if (videoDataPromises.length > 0 && YOUTUBE_API_KEY) {
+    console.log(`[Filtros] Aguardando ${videoDataPromises.length} requisições da API...`);
     await Promise.all(videoDataPromises);
-    console.log(`Updated subscriber counts for ${videoDataPromises.length} channels`);
+    console.log(`[Filtros] ✓ Atualizou contagem de assinantes de ${videoDataPromises.length} canais`);
     applyFilters();
+  } else if (videoDataPromises.length > 0 && !YOUTUBE_API_KEY) {
+    console.warn('[Filtros] ⚠️ Para obter dados precisos de assinantes, configure sua API Key do YouTube em chrome://extensions');
   }
 }
 
@@ -461,55 +474,26 @@ async function fetchSubscriberCount(channelUrl) {
 
 function extractSubscribers(element) {
   try {
-    const subSelectors = [
-      '#owner-sub-count',
-      'ytd-video-owner-renderer #owner-sub-count',
-      '#subscriber-count',
-      'yt-formatted-string#subscriber-count',
-      '.ytd-channel-renderer #subscriber-count',
-      'ytd-subscribe-button-renderer #owner-sub-count'
-    ];
+    console.log('[Filtros] Tentando extrair assinantes do elemento:', element.tagName);
     
-    for (const selector of subSelectors) {
-      const subElement = element.querySelector(selector);
-      if (subElement && subElement.textContent.trim()) {
-        const result = parseSubscriberText(subElement.textContent.trim());
-        if (result !== null) return result;
+    const subElement = element.querySelector('ytd-video-meta-block #owner-sub-count');
+    
+    if (subElement && subElement.textContent.trim()) {
+      const text = subElement.textContent.trim();
+      console.log('[Filtros] Encontrou #owner-sub-count:', text);
+      const result = parseSubscriberText(text);
+      if (result !== null) {
+        console.log('[Filtros] ✓ Assinantes extraídos:', result);
+        return result;
       }
     }
     
-    const metadataText = element.querySelector('#metadata')?.textContent || '';
-    const ownerText = element.querySelector('#owner-text, ytd-channel-name')?.textContent || '';
-    const videoOwner = element.querySelector('ytd-video-owner-renderer')?.textContent || '';
-    const combinedText = metadataText + ' ' + ownerText + ' ' + videoOwner;
-    
-    const patterns = [
-      /(\d+[.,]?\d*)\s*(mil|K)\s*(de\s*)?(inscritos?|assinantes?)/i,
-      /(\d+[.,]?\d*)\s*(mi|M|milhões?)\s*(de\s*)?(inscritos?|assinantes?)/i,
-      /(\d+[.,]?\d*)\s*(mil|K)\s*subscribers?/i,
-      /(\d+[.,]?\d*)\s*(mi|M)\s*subscribers?/i
-    ];
-    
-    for (const pattern of patterns) {
-      const match = combinedText.match(pattern);
-      if (match) {
-        let num = parseFloat(match[1].replace(',', '.'));
-        const multiplier = match[2];
-        
-        if (multiplier && multiplier.match(/M|mi|milhões?/i)) {
-          num *= 1000000;
-        } else if (multiplier && multiplier.match(/K|mil/i)) {
-          num *= 1000;
-        }
-        
-        return Math.floor(num);
-      }
-    }
+    console.log('[Filtros] ✗ Não encontrou assinantes no DOM para este vídeo');
+    return null;
   } catch (error) {
-    console.log('Could not extract subscriber count:', error);
+    console.error('[Filtros] Erro ao extrair assinantes:', error);
+    return null;
   }
-  
-  return null;
 }
 
 function parseSubscriberText(text) {
