@@ -252,73 +252,74 @@ async function captureVideos() {
 
 function extractVideoData(element) {
   try {
-    // Debug: mostra a estrutura do elemento
-    console.log('[Filtros] 🔍 Analisando elemento:', element.tagName);
-    console.log('[Filtros] 🔍 innerHTML preview:', element.innerHTML.substring(0, 200));
+    // Para ytd-rich-item-renderer, precisa buscar dentro de ytd-rich-grid-media
+    const isRichItem = element.tagName === 'YTD-RICH-ITEM-RENDERER';
+    const contentElement = isRichItem ? element.querySelector('ytd-rich-grid-media') : element;
     
-    const titleElement = element.querySelector('#video-title') || element.querySelector('a#video-title-link');
-    const thumbnailElement = element.querySelector('img');
-    const metadataElement = element.querySelector('#metadata-line');
+    if (!contentElement) {
+      console.log('[Filtros] ⚠️ Elemento de conteúdo não encontrado');
+      return null;
+    }
+    
+    // Seletores diferentes para rich-item vs outros
+    const titleElement = contentElement.querySelector('#video-title') || 
+                        contentElement.querySelector('a#video-title-link') ||
+                        contentElement.querySelector('h3 a');
     
     if (!titleElement) {
       console.log('[Filtros] ⚠️ Elemento sem título, pulando...');
-      console.log('[Filtros] 🔍 Tentou #video-title e a#video-title-link');
       return null;
     }
     
     const title = titleElement.textContent.trim();
     const url = titleElement.href;
+    
+    const thumbnailElement = contentElement.querySelector('img');
     const thumbnail = thumbnailElement?.src || '';
     
-    // Tenta múltiplos seletores para visualizações
-    let viewsText = '';
-    if (metadataElement) {
-      const spans = metadataElement.querySelectorAll('span');
-      viewsText = spans[0]?.textContent?.trim() || '';
-    }
+    // Extrai visualizações e data do metadata
+    const metadataElement = contentElement.querySelector('#metadata-line') || 
+                           contentElement.querySelector('ytd-video-meta-block');
     
-    // Fallback: busca em todo o elemento
-    if (!viewsText || viewsText === '0') {
-      const metaText = element.querySelector('#metadata')?.textContent || '';
-      const viewsMatch = metaText.match(/(\d+[.,]?\d*)\s*(mil|K|mi|M)?\s*(visualizações|visualizacao|views)/i);
+    let viewsText = '';
+    let publishDateText = '';
+    
+    if (metadataElement) {
+      const allText = metadataElement.textContent || '';
+      
+      // Extrai visualizações
+      const viewsMatch = allText.match(/(\d+[.,]?\d*)\s*(mil|K|mi|M)?\s*(visualizações|visualizacao|views)/i);
       if (viewsMatch) {
         viewsText = viewsMatch[0];
       }
-    }
-    
-    const views = parseViews(viewsText);
-    console.log(`[Filtros] 📊 "${title}" - Views text: "${viewsText}" → Convertido: ${views}`);
-    
-    // Tenta múltiplos seletores para data
-    let publishDateText = '';
-    if (metadataElement) {
-      const spans = metadataElement.querySelectorAll('span');
-      publishDateText = spans[1]?.textContent?.trim() || '';
-    }
-    
-    // Fallback: busca em todo o elemento
-    if (!publishDateText) {
-      const metaText = element.querySelector('#metadata')?.textContent || '';
-      const dateMatch = metaText.match(/há\s+\d+\s+(segundo|minuto|hora|dia|semana|mês|ano)s?/i);
+      
+      // Extrai data
+      const dateMatch = allText.match(/há\s+\d+\s+(segundo|minuto|hora|dia|semana|mês|mes|ano)s?/i);
       if (dateMatch) {
         publishDateText = dateMatch[0];
       }
     }
     
+    const views = parseViews(viewsText);
     const publishDate = parsePublishDate(publishDateText);
-    console.log(`[Filtros] 📅 Data: "${publishDateText}"`);
     
-    const durationElement = element.querySelector('ytd-thumbnail-overlay-time-status-renderer span');
+    console.log(`[Filtros] ✓ "${title.substring(0, 40)}..." - Views: ${viewsText} (${views}) - Data: ${publishDateText}`);
+    
+    const durationElement = contentElement.querySelector('ytd-thumbnail-overlay-time-status-renderer span') ||
+                           contentElement.querySelector('span.ytd-thumbnail-overlay-time-status-renderer');
     const duration = parseDuration(durationElement?.textContent || '0:00');
     
-    const channelElement = element.querySelector('ytd-channel-name a, #channel-name a');
+    const channelElement = contentElement.querySelector('ytd-channel-name a') || 
+                          contentElement.querySelector('#channel-name a') ||
+                          contentElement.querySelector('yt-formatted-string.ytd-channel-name a');
     const channelName = channelElement?.textContent.trim() || 'Unknown';
     const channelUrl = channelElement?.href || '';
     
-    const channelAvatarElement = element.querySelector('#avatar img, ytd-channel-thumbnail img');
+    const channelAvatarElement = contentElement.querySelector('#avatar img') || 
+                                contentElement.querySelector('ytd-channel-thumbnail img');
     const channelAvatar = channelAvatarElement?.src || '';
     
-    const subscribers = extractSubscribers(element);
+    const subscribers = extractSubscribers(contentElement || element);
     
     const hoursAgo = (Date.now() - publishDate) / (1000 * 60 * 60);
     const vph = hoursAgo > 0 ? Math.round(views / hoursAgo) : 0;
