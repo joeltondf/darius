@@ -172,23 +172,44 @@ function formatValue(value, type, isMax = false) {
 async function captureVideos() {
   allVideos = [];
   
+  // Debug: mostra todos os elementos ytd- na página
+  console.log('[Filtros] 🔍 DEBUG - Elementos ytd- na página:');
+  const allYtdElements = document.querySelectorAll('[id^="content"]');
+  console.log('[Filtros] Elementos com id="content":', allYtdElements.length);
+  
+  // Lista todos os custom elements do YouTube
+  const customElements = Array.from(document.querySelectorAll('*')).filter(el => el.tagName.startsWith('YTD-'));
+  const uniqueTags = [...new Set(customElements.map(el => el.tagName))];
+  console.log('[Filtros] 🔍 Custom elements únicos encontrados:', uniqueTags.slice(0, 20));
+  
   // Tenta diferentes seletores dependendo da página
   let videoElements = document.querySelectorAll('ytd-video-renderer');
+  console.log('[Filtros] ytd-video-renderer:', videoElements.length);
   
   if (videoElements.length === 0) {
     videoElements = document.querySelectorAll('ytd-grid-video-renderer');
+    console.log('[Filtros] ytd-grid-video-renderer:', videoElements.length);
   }
   
   if (videoElements.length === 0) {
     videoElements = document.querySelectorAll('ytd-rich-item-renderer');
+    console.log('[Filtros] ytd-rich-item-renderer:', videoElements.length);
   }
   
   if (videoElements.length === 0) {
     videoElements = document.querySelectorAll('ytd-compact-video-renderer');
+    console.log('[Filtros] ytd-compact-video-renderer:', videoElements.length);
   }
   
-  console.log(`[Filtros] Encontrou ${videoElements.length} elementos de vídeo na página`);
-  console.log(`[Filtros] Tipo de elemento:`, videoElements[0]?.tagName);
+  if (videoElements.length === 0) {
+    videoElements = document.querySelectorAll('ytd-rich-grid-media');
+    console.log('[Filtros] ytd-rich-grid-media:', videoElements.length);
+  }
+  
+  console.log(`[Filtros] ✓ Encontrou ${videoElements.length} elementos de vídeo na página`);
+  if (videoElements.length > 0) {
+    console.log(`[Filtros] Tipo de elemento:`, videoElements[0]?.tagName);
+  }
   
   const videoDataPromises = [];
   
