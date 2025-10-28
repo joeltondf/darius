@@ -172,8 +172,23 @@ function formatValue(value, type, isMax = false) {
 async function captureVideos() {
   allVideos = [];
   
-  const videoElements = document.querySelectorAll('ytd-video-renderer, ytd-grid-video-renderer, ytd-rich-item-renderer');
+  // Tenta diferentes seletores dependendo da página
+  let videoElements = document.querySelectorAll('ytd-video-renderer');
+  
+  if (videoElements.length === 0) {
+    videoElements = document.querySelectorAll('ytd-grid-video-renderer');
+  }
+  
+  if (videoElements.length === 0) {
+    videoElements = document.querySelectorAll('ytd-rich-item-renderer');
+  }
+  
+  if (videoElements.length === 0) {
+    videoElements = document.querySelectorAll('ytd-compact-video-renderer');
+  }
+  
   console.log(`[Filtros] Encontrou ${videoElements.length} elementos de vídeo na página`);
+  console.log(`[Filtros] Tipo de elemento:`, videoElements[0]?.tagName);
   
   const videoDataPromises = [];
   
@@ -216,12 +231,17 @@ async function captureVideos() {
 
 function extractVideoData(element) {
   try {
-    const titleElement = element.querySelector('#video-title');
+    // Debug: mostra a estrutura do elemento
+    console.log('[Filtros] 🔍 Analisando elemento:', element.tagName);
+    console.log('[Filtros] 🔍 innerHTML preview:', element.innerHTML.substring(0, 200));
+    
+    const titleElement = element.querySelector('#video-title') || element.querySelector('a#video-title-link');
     const thumbnailElement = element.querySelector('img');
     const metadataElement = element.querySelector('#metadata-line');
     
     if (!titleElement) {
       console.log('[Filtros] ⚠️ Elemento sem título, pulando...');
+      console.log('[Filtros] 🔍 Tentou #video-title e a#video-title-link');
       return null;
     }
     
