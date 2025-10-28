@@ -342,26 +342,29 @@ function extractVideoData(element) {
 
 function parseViews(viewsText) {
   if (!viewsText || viewsText === '0') {
-    console.log('[Filtros] ⚠️ viewsText vazio ou "0"');
     return 0;
   }
   
-  const match = viewsText.match(/[\d,.]+/);
+  const match = viewsText.match(/(\d+)[.,]?(\d*)/);
   if (!match) {
-    console.log('[Filtros] ⚠️ Não encontrou número em:', viewsText);
     return 0;
   }
   
-  let num = match[0].replace(/[,.]/g, '');
+  // Extrai número com decimais (ex: "1,1" ou "1.5")
+  let num = parseFloat(match[1] + (match[2] ? '.' + match[2] : ''));
   
-  if (viewsText.includes('mi') || viewsText.includes('M')) {
-    return parseFloat(num) * 1000000;
+  // Detecta multiplicador (ordem importa: milhões antes de mil)
+  if (viewsText.match(/\bmilhões?\b|\bmilhoes?\b/i) || viewsText.match(/\bmi\b/i)) {
+    return Math.floor(num * 1000000);
   }
-  if (viewsText.includes('mil') || viewsText.includes('K')) {
-    return parseFloat(num) * 1000;
+  if (viewsText.match(/\bmil\b/i) || viewsText.match(/\bK\b/)) {
+    return Math.floor(num * 1000);
+  }
+  if (viewsText.match(/\bM\b/) && !viewsText.match(/\bmil\b/i)) {
+    return Math.floor(num * 1000000);
   }
   
-  return parseInt(num) || 0;
+  return Math.floor(num);
 }
 
 function parsePublishDate(dateText) {
