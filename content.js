@@ -22,6 +22,11 @@ chrome.runtime.onMessage.addListener((request, sender, sendResponse) => {
     togglePanel();
     sendResponse({ success: true });
   }
+  if (request.action === 'updateApiKey') {
+    YOUTUBE_API_KEY = request.apiKey;
+    subscriberCache.clear();
+    console.log('API Key updated, cache cleared');
+  }
   return true;
 });
 
@@ -37,6 +42,11 @@ function openPanel() {
   if (document.getElementById('filtros-panel-container')) {
     return;
   }
+
+  const backdrop = document.createElement('div');
+  backdrop.id = 'filtros-panel-backdrop';
+  backdrop.addEventListener('click', closePanel);
+  document.body.appendChild(backdrop);
 
   const container = document.createElement('div');
   container.id = 'filtros-panel-container';
@@ -54,10 +64,16 @@ function openPanel() {
 
 function closePanel() {
   const container = document.getElementById('filtros-panel-container');
+  const backdrop = document.getElementById('filtros-panel-backdrop');
+  
   if (container) {
     container.remove();
-    panelVisible = false;
   }
+  if (backdrop) {
+    backdrop.remove();
+  }
+  
+  panelVisible = false;
 }
 
 function initializePanel() {
@@ -311,12 +327,94 @@ function determineVideoType(durationSeconds, url, element) {
 }
 
 const subscriberCache = new Map();
+let YOUTUBE_API_KEY = null;
+
+chrome.storage.sync.get(['youtubeApiKey'], function(result) {
+  if (result.youtubeApiKey) {
+    YOUTUBE_API_KEY = result.youtubeApiKey;
+  }
+});
+
+async function getChannelIdFromUrl(channelUrl) {
+  if (!channelUrl) return null;
+  
+  const urlPatterns = [
+    /youtube\.com\/(channel|c|user)\/([^/?]+)/,
+    /youtube\.com\/@([^/?]+)/
+  ];
+  
+  for (const pattern of urlPatterns) {
+    const match = channelUrl.match(pattern);
+    if (match) {
+      if (match[1] === 'channel') {
+        return match[2];
+      }
+      return await resolveChannelHandle(match[2] || match[1]);
+    }
+  }
+  
+  return null;
+}
+
+async function resolveChannelHandle(handle) {
+  if (!YOUTUBE_API_KEY) return null;
+  
+  try {
+    const response = await fetch(
+      `https://www.googleapis.com/youtube/v3/search?part=snippet&type=channel&q=${encodeURIComponent(handle)}&key=${YOUTUBE_API_KEY}&maxResults=1`
+    );
+    const data = await response.json();
+    
+    if (data.items && data.items.length > 0 && data.items[0].id) {
+      return data.items[0].id.channelId;
+    }
+  } catch (error) {
+    console.log('Error resolving channel handle:', error);
+  }
+  
+  return null;
+}
+
+async function fetchSubscriberCountViaAPI(channelId) {
+  if (!channelId || !YOUTUBE_API_KEY) return null;
+  
+  try {
+    const response = await fetch(
+      `https://www.googleapis.com/youtube/v3/channels?part=statistics&id=${channelId}&key=${YOUTUBE_API_KEY}`
+    );
+    const data = await response.json();
+    
+    if (data.items && data.items.length > 0) {
+      const subs = parseInt(data.items[0].statistics.subscriberCount);
+      return isNaN(subs) ? null : subs;
+    }
+  } catch (error) {
+    console.log('Error fetching subscriber count via API:', error);
+  }
+  
+  return null;
+}
 
 async function fetchSubscriberCount(channelUrl) {
   if (!channelUrl) return null;
   
   if (subscriberCache.has(channelUrl)) {
     return subscriberCache.get(channelUrl);
+  }
+  
+  if (YOUTUBE_API_KEY) {
+    try {
+      const channelId = await getChannelIdFromUrl(channelUrl);
+      if (channelId) {
+        const subs = await fetchSubscriberCountViaAPI(channelId);
+        if (subs !== null) {
+          subscriberCache.set(channelUrl, subs);
+          return subs;
+        }
+      }
+    } catch (error) {
+      console.log('API method failed, falling back to scraping:', error);
+    }
   }
   
   try {

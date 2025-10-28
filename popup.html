@@ -57,6 +57,23 @@
       font-size: 40px;
       color: #4a9eff;
     }
+    .settings-link {
+      margin-top: 15px;
+      text-align: center;
+      padding-top: 15px;
+      border-top: 1px solid #333;
+    }
+    .settings-link a {
+      color: #4a9eff;
+      text-decoration: none;
+      font-size: 13px;
+      display: inline-flex;
+      align-items: center;
+      gap: 6px;
+    }
+    .settings-link a:hover {
+      text-decoration: underline;
+    }
   </style>
 </head>
 <body>
@@ -67,6 +84,11 @@
   <p>Clique no botão abaixo quando estiver em uma página do YouTube para abrir o painel de filtros.</p>
   <button id="togglePanel">Abrir Painel de Filtros</button>
   <div class="status" id="status"></div>
+  
+  <div class="settings-link">
+    <a href="#" id="settingsLink">⚙️ Configurar API Key</a>
+  </div>
+  
   <script src="popup.js"></script>
 </body>
 </html>

@@ -10,7 +10,8 @@
     "downloads"
   ],
   "host_permissions": [
-    "https://www.youtube.com/*"
+    "https://www.youtube.com/*",
+    "https://www.googleapis.com/*"
   ],
   "action": {
     "default_popup": "popup.html",
@@ -41,5 +42,6 @@
       "resources": ["panel.html", "panel.css", "icons/*"],
       "matches": ["https://www.youtube.com/*"]
     }
-  ]
+  ],
+  "options_page": "options.html"
 }

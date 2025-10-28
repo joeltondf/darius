@@ -34,3 +34,8 @@ chrome.tabs.query({ active: true, currentWindow: true }, ([tab]) => {
     statusDiv.style.color = '#9e9e9e';
   }
 });
+
+document.getElementById('settingsLink').addEventListener('click', function(e) {
+  e.preventDefault();
+  chrome.runtime.openOptionsPage();
+});
