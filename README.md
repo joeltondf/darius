@@ -7,15 +7,21 @@ Uma extensão poderosa para Google Chrome que permite filtrar e analisar vídeos
 ### Filtros Avançados
 - **Visualizações**: Filtre por número de visualizações (0 - 10M+)
 - **Assinantes**: Filtre por número de assinantes do canal (0 - 10M+)
+  - Extração inteligente do DOM do YouTube com fallback assíncrono
+  - Suporte para português e inglês (mil, K, mi, M, milhões)
+  - Cache de dados para melhor performance
 - **Duração**: Filtre por duração do vídeo (0 - 180+ minutos)
 - **VPH (Visualizações Por Hora)**: Descubra vídeos em crescimento rápido
 - **Data de Publicação**: Últimas 24h, 7 dias, 30 dias, 3 meses, 1 ano ou todos
 
 ### Funcionalidades
 - ✅ Captura automática de vídeos da página do YouTube
+- ✅ Extração inteligente de assinantes com múltiplos seletores DOM
+- ✅ Busca assíncrona de dados de canal quando não disponíveis no DOM
 - ✅ Cálculo automático de VPH para cada vídeo
 - ✅ Múltiplas opções de ordenação (visualizações, VPH, duração, data, assinantes)
 - ✅ Filtros por tipo (Vídeos, Shorts, Live)
+- ✅ Detecção de transmissões ao vivo via badges
 - ✅ Exportação completa para CSV
 - ✅ Interface dark moderna e intuitiva
 - ✅ Painel lateral não-intrusivo
@@ -96,6 +102,35 @@ filtros-youtube-extension/
 - Last 3 months
 - Last year
 - All time
+
+## 🔍 Extração de Dados de Assinantes
+
+A extensão utiliza uma estratégia em duas camadas para obter dados de assinantes:
+
+### 1. Extração Direta do DOM
+A extensão tenta primeiro extrair os assinantes diretamente dos elementos da página usando vários seletores:
+- `#owner-sub-count` - Contador principal de assinantes
+- `ytd-video-owner-renderer #owner-sub-count` - Elemento do proprietário do vídeo
+- `#subscriber-count` - Contador alternativo
+- `yt-formatted-string#subscriber-count` - String formatada do YouTube
+- E outros seletores de fallback
+
+### 2. Busca Assíncrona (Fallback)
+Quando os dados não estão disponíveis no DOM da página atual:
+- A extensão faz uma requisição assíncrona à página do canal
+- Extrai os dados do `ytInitialData` embutido na página
+- Armazena em cache para evitar requisições repetidas
+- Atualiza a interface automaticamente quando os dados chegam
+
+### Suporte Multilíngue
+A função de parsing reconhece formatos em:
+- **Português**: "1,5 mil inscritos", "6,22 mi de assinantes", "500 milhões de inscritos"
+- **Inglês**: "1.5K subscribers", "6.22M subscribers"
+
+### Comportamento quando dados não disponíveis
+- Interface mostra: "Assinantes não disponíveis"
+- CSV exporta: "N/A"
+- Filtros ignoram vídeos sem dados de assinantes (não os excluem)
 
 ## 💾 Exportação CSV
 

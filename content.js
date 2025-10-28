@@ -153,20 +153,36 @@ function formatValue(value, type, isMax = false) {
   return value.toString();
 }
 
-function captureVideos() {
+async function captureVideos() {
   allVideos = [];
   
   const videoElements = document.querySelectorAll('ytd-video-renderer, ytd-grid-video-renderer, ytd-rich-item-renderer');
+  
+  const videoDataPromises = [];
   
   videoElements.forEach(element => {
     const video = extractVideoData(element);
     if (video) {
       allVideos.push(video);
+      
+      if (video.channelUrl && video.subscribers === null) {
+        videoDataPromises.push(
+          fetchSubscriberCount(video.channelUrl).then(subs => {
+            video.subscribers = subs;
+          })
+        );
+      }
     }
   });
   
   console.log(`Captured ${allVideos.length} videos`);
   applyFilters();
+  
+  if (videoDataPromises.length > 0) {
+    await Promise.all(videoDataPromises);
+    console.log(`Updated subscriber counts for ${videoDataPromises.length} channels`);
+    applyFilters();
+  }
 }
 
 function extractVideoData(element) {
@@ -294,22 +310,35 @@ function determineVideoType(durationSeconds, url, element) {
   return 'video';
 }
 
-function extractSubscribers(element) {
+const subscriberCache = new Map();
+
+async function fetchSubscriberCount(channelUrl) {
+  if (!channelUrl) return null;
+  
+  if (subscriberCache.has(channelUrl)) {
+    return subscriberCache.get(channelUrl);
+  }
+  
   try {
-    const subElements = [
-      element.querySelector('#metadata-line .ytd-video-meta-block'),
-      element.querySelector('.yt-simple-endpoint.ytd-video-meta-block'),
-      element.querySelector('[aria-label*="subscriber"], [aria-label*="assinante"]'),
-      element.querySelector('#subscriber-count')
+    const response = await fetch(channelUrl);
+    const html = await response.text();
+    
+    const patterns = [
+      /"subscriberCountText":\s*\{"simpleText":\s*"([^"]+)"\}/,
+      /"subscriberCountText":\s*\{"accessibility":\s*\{[^}]+\},\s*"simpleText":\s*"([^"]+)"\}/,
+      /(\d+[.,]?\d*)\s*(K|M|mil|milhões?|mi)\s*(de\s*)?(inscritos?|subscribers?|assinantes?)/i
     ];
     
-    for (const subElement of subElements) {
-      if (subElement && subElement.textContent) {
-        const subText = subElement.textContent.trim();
-        const match = subText.match(/(\d+[.,]?\d*)\s*(K|M|mil|mi)?/i);
-        if (match) {
-          let num = parseFloat(match[1].replace(',', '.'));
-          const multiplier = match[2];
+    for (const pattern of patterns) {
+      const match = html.match(pattern);
+      if (match && match[1]) {
+        const subText = match[1];
+        const numMatch = subText.match(/(\d+[.,]?\d*)\s*(K|M|mil|mi)?/i);
+        
+        if (numMatch) {
+          let num = parseFloat(numMatch[1].replace(',', '.'));
+          const multiplier = numMatch[2];
+          
           if (multiplier) {
             if (multiplier.match(/M|mi/i)) {
               num *= 1000000;
@@ -317,8 +346,65 @@ function extractSubscribers(element) {
               num *= 1000;
             }
           }
-          return Math.floor(num);
+          
+          const result = Math.floor(num);
+          subscriberCache.set(channelUrl, result);
+          return result;
         }
+      }
+    }
+  } catch (error) {
+    console.log('Could not fetch subscriber count:', error);
+  }
+  
+  subscriberCache.set(channelUrl, null);
+  return null;
+}
+
+function extractSubscribers(element) {
+  try {
+    const subSelectors = [
+      '#owner-sub-count',
+      'ytd-video-owner-renderer #owner-sub-count',
+      '#subscriber-count',
+      'yt-formatted-string#subscriber-count',
+      '.ytd-channel-renderer #subscriber-count',
+      'ytd-subscribe-button-renderer #owner-sub-count'
+    ];
+    
+    for (const selector of subSelectors) {
+      const subElement = element.querySelector(selector);
+      if (subElement && subElement.textContent.trim()) {
+        const result = parseSubscriberText(subElement.textContent.trim());
+        if (result !== null) return result;
+      }
+    }
+    
+    const metadataText = element.querySelector('#metadata')?.textContent || '';
+    const ownerText = element.querySelector('#owner-text, ytd-channel-name')?.textContent || '';
+    const videoOwner = element.querySelector('ytd-video-owner-renderer')?.textContent || '';
+    const combinedText = metadataText + ' ' + ownerText + ' ' + videoOwner;
+    
+    const patterns = [
+      /(\d+[.,]?\d*)\s*(mil|K)\s*(de\s*)?(inscritos?|assinantes?)/i,
+      /(\d+[.,]?\d*)\s*(mi|M|milhões?)\s*(de\s*)?(inscritos?|assinantes?)/i,
+      /(\d+[.,]?\d*)\s*(mil|K)\s*subscribers?/i,
+      /(\d+[.,]?\d*)\s*(mi|M)\s*subscribers?/i
+    ];
+    
+    for (const pattern of patterns) {
+      const match = combinedText.match(pattern);
+      if (match) {
+        let num = parseFloat(match[1].replace(',', '.'));
+        const multiplier = match[2];
+        
+        if (multiplier && multiplier.match(/M|mi|milhões?/i)) {
+          num *= 1000000;
+        } else if (multiplier && multiplier.match(/K|mil/i)) {
+          num *= 1000;
+        }
+        
+        return Math.floor(num);
       }
     }
   } catch (error) {
@@ -326,6 +412,24 @@ function extractSubscribers(element) {
   }
   
   return null;
+}
+
+function parseSubscriberText(text) {
+  const match = text.match(/(\d+[.,]?\d*)\s*(K|M|mil|mi|milhões?)?/i);
+  if (!match) return null;
+  
+  let num = parseFloat(match[1].replace(',', '.'));
+  const multiplier = match[2];
+  
+  if (multiplier) {
+    if (multiplier.match(/M|mi|milhões?/i)) {
+      num *= 1000000;
+    } else if (multiplier.match(/K|mil/i)) {
+      num *= 1000;
+    }
+  }
+  
+  return Math.floor(num);
 }
 
 function applyFilters() {
