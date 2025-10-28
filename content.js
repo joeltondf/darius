@@ -674,6 +674,10 @@ function renderVideos() {
     return;
   }
   
+  // Calcula VPH médio de todos os vídeos (baseline)
+  const totalVph = allVideos.reduce((sum, v) => sum + v.vph, 0);
+  const averageVph = allVideos.length > 0 ? totalVph / allVideos.length : 1;
+  
   videoList.innerHTML = filteredVideos.map(video => {
     // Gera badges baseado nas características do vídeo
     let badges = '';
@@ -701,6 +705,15 @@ function renderVideos() {
       badges += '<span class="video-badge badge-trending">🔥 Trending</span>';
     }
     
+    // Calcula multiplicador de VPH (quantas vezes acima da média)
+    const vphMultiplier = averageVph > 0 ? video.vph / averageVph : 0;
+    let multiplierBadge = '';
+    
+    if (vphMultiplier >= 2) {
+      const multiplierValue = Math.round(vphMultiplier);
+      multiplierBadge = `<span class="vph-multiplier">${multiplierValue}x</span>`;
+    }
+    
     return `
       <div class="video-item" onclick="window.open('${video.url}', '_blank')">
         <div class="video-thumbnail">
@@ -714,7 +727,7 @@ function renderVideos() {
             <span>👁️ ${formatNumber(video.views)}</span>
             <span>•</span>
             <span>${video.publishDateText}</span>
-            <span class="stat-badge vph">⚡ ${formatNumber(video.vph)} VPH</span>
+            <span class="stat-badge vph">⚡ ${formatNumber(video.vph)} VPH ${multiplierBadge}</span>
           </div>
           <div class="video-channel">
             <div class="channel-avatar">
