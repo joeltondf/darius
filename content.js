@@ -597,6 +597,11 @@ function parseSubscriberText(text) {
 
 function applyFilters() {
   filteredVideos = allVideos.filter(video => {
+    // Se nenhum filtro de tipo estiver ativo, mostra todos
+    const hasTypeFilter = filters.showVideos || filters.showShorts || filters.showLive;
+    if (!hasTypeFilter) return true;
+    
+    // Caso contrário, filtra por tipo
     if (filters.showVideos && video.type === 'video') return true;
     if (filters.showShorts && video.type === 'short') return true;
     if (filters.showLive && video.type === 'live') return true;
