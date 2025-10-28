@@ -229,11 +229,41 @@ function extractVideoData(element) {
     const url = titleElement.href;
     const thumbnail = thumbnailElement?.src || '';
     
-    const viewsText = metadataElement?.querySelector('span:first-child')?.textContent || '0';
+    // Tenta múltiplos seletores para visualizações
+    let viewsText = '';
+    if (metadataElement) {
+      const spans = metadataElement.querySelectorAll('span');
+      viewsText = spans[0]?.textContent?.trim() || '';
+    }
+    
+    // Fallback: busca em todo o elemento
+    if (!viewsText || viewsText === '0') {
+      const metaText = element.querySelector('#metadata')?.textContent || '';
+      const viewsMatch = metaText.match(/(\d+[.,]?\d*)\s*(mil|K|mi|M)?\s*(visualizações|visualizacao|views)/i);
+      if (viewsMatch) {
+        viewsText = viewsMatch[0];
+      }
+    }
+    
     const views = parseViews(viewsText);
     console.log(`[Filtros] 📊 "${title}" - Views text: "${viewsText}" → Convertido: ${views}`);
     
-    const publishDateText = metadataElement?.querySelector('span:last-child')?.textContent || '';
+    // Tenta múltiplos seletores para data
+    let publishDateText = '';
+    if (metadataElement) {
+      const spans = metadataElement.querySelectorAll('span');
+      publishDateText = spans[1]?.textContent?.trim() || '';
+    }
+    
+    // Fallback: busca em todo o elemento
+    if (!publishDateText) {
+      const metaText = element.querySelector('#metadata')?.textContent || '';
+      const dateMatch = metaText.match(/há\s+\d+\s+(segundo|minuto|hora|dia|semana|mês|ano)s?/i);
+      if (dateMatch) {
+        publishDateText = dateMatch[0];
+      }
+    }
+    
     const publishDate = parsePublishDate(publishDateText);
     console.log(`[Filtros] 📅 Data: "${publishDateText}"`);
     
