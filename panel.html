@@ -15,43 +15,42 @@
       <button id="closePanel" class="close-btn">✕</button>
     </div>
 
-    <div class="filtros-stats">
-      <span id="videoCount">Mostrando 0 de 0 vídeos</span>
-    </div>
+    <div class="filtros-content">
+      <!-- SIDEBAR ESQUERDA: Filtros -->
+      <div class="filtros-sidebar">
+        <div class="filtros-actions">
+          <button id="loadMoreBtn" class="action-btn primary">Load more videos</button>
+          <button id="exportCsvBtn" class="action-btn secondary">Baixar CSV</button>
+        </div>
 
-    <div class="filtros-actions">
-      <button id="loadMoreBtn" class="action-btn primary">Load more videos</button>
-      <button id="exportCsvBtn" class="action-btn secondary">Baixar CSV</button>
-    </div>
+        <div class="filtros-type-filters">
+          <div class="type-checkboxes">
+            <label class="checkbox-label">
+              <input type="checkbox" id="filterVideos" checked>
+              <span>Vídeos</span>
+            </label>
+            <label class="checkbox-label">
+              <input type="checkbox" id="filterShorts">
+              <span>Shorts</span>
+            </label>
+            <label class="checkbox-label">
+              <input type="checkbox" id="filterLive">
+              <span>Live</span>
+            </label>
+          </div>
+          <div class="sort-select">
+            <label>Ordenar por:</label>
+            <select id="sortBy">
+              <option value="views">Visualizações</option>
+              <option value="vph">VPH</option>
+              <option value="duration">Duração</option>
+              <option value="publishDate">Data</option>
+              <option value="subscribers">Assinantes</option>
+            </select>
+          </div>
+        </div>
 
-    <div class="filtros-type-filters">
-      <div class="type-checkboxes">
-        <label class="checkbox-label">
-          <input type="checkbox" id="filterVideos" checked>
-          <span>Vídeos</span>
-        </label>
-        <label class="checkbox-label">
-          <input type="checkbox" id="filterShorts">
-          <span>Shorts</span>
-        </label>
-        <label class="checkbox-label">
-          <input type="checkbox" id="filterLive">
-          <span>Live</span>
-        </label>
-      </div>
-      <div class="sort-select">
-        <label>Ordenar por:</label>
-        <select id="sortBy">
-          <option value="views">Visualizações</option>
-          <option value="vph">VPH</option>
-          <option value="duration">Duração</option>
-          <option value="publishDate">Data</option>
-          <option value="subscribers">Assinantes</option>
-        </select>
-      </div>
-    </div>
-
-    <div class="filtros-controls">
+        <div class="filtros-controls">
       <div class="filter-group">
         <label class="filter-label">Visualizações</label>
         <div class="slider-container">
@@ -112,13 +111,22 @@
         </select>
       </div>
 
-      <button id="resetFilters" class="reset-btn">Reiniciar Filtros</button>
-    </div>
+          <button id="resetFilters" class="reset-btn">Reiniciar Filtros</button>
+        </div>
+      </div>
 
-    <div class="filtros-videos" id="videoList">
-      <div class="loading-state">
-        <div class="loading-spinner"></div>
-        <p>Carregando vídeos...</p>
+      <!-- ÁREA PRINCIPAL DIREITA: Vídeos -->
+      <div class="filtros-main">
+        <div class="filtros-stats">
+          <span id="videoCount">Mostrando 0 de 0 vídeos</span>
+        </div>
+        
+        <div class="filtros-videos" id="videoList">
+          <div class="loading-state">
+            <div class="loading-spinner"></div>
+            <p>Carregando vídeos...</p>
+          </div>
+        </div>
       </div>
     </div>
   </div>
