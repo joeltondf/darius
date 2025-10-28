@@ -220,7 +220,10 @@ function extractVideoData(element) {
     const thumbnailElement = element.querySelector('img');
     const metadataElement = element.querySelector('#metadata-line');
     
-    if (!titleElement) return null;
+    if (!titleElement) {
+      console.log('[Filtros] ⚠️ Elemento sem título, pulando...');
+      return null;
+    }
     
     const title = titleElement.textContent.trim();
     const url = titleElement.href;
@@ -228,9 +231,11 @@ function extractVideoData(element) {
     
     const viewsText = metadataElement?.querySelector('span:first-child')?.textContent || '0';
     const views = parseViews(viewsText);
+    console.log(`[Filtros] 📊 "${title}" - Views text: "${viewsText}" → Convertido: ${views}`);
     
     const publishDateText = metadataElement?.querySelector('span:last-child')?.textContent || '';
     const publishDate = parsePublishDate(publishDateText);
+    console.log(`[Filtros] 📅 Data: "${publishDateText}"`);
     
     const durationElement = element.querySelector('ytd-thumbnail-overlay-time-status-renderer span');
     const duration = parseDuration(durationElement?.textContent || '0:00');
@@ -271,8 +276,16 @@ function extractVideoData(element) {
 }
 
 function parseViews(viewsText) {
+  if (!viewsText || viewsText === '0') {
+    console.log('[Filtros] ⚠️ viewsText vazio ou "0"');
+    return 0;
+  }
+  
   const match = viewsText.match(/[\d,.]+/);
-  if (!match) return 0;
+  if (!match) {
+    console.log('[Filtros] ⚠️ Não encontrou número em:', viewsText);
+    return 0;
+  }
   
   let num = match[0].replace(/[,.]/g, '');
   
