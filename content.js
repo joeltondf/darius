@@ -252,74 +252,67 @@ async function captureVideos() {
 
 function extractVideoData(element) {
   try {
-    // Para ytd-rich-item-renderer, precisa buscar dentro de ytd-rich-grid-media
-    const isRichItem = element.tagName === 'YTD-RICH-ITEM-RENDERER';
-    const contentElement = isRichItem ? element.querySelector('ytd-rich-grid-media') : element;
+    // Tenta vários seletores para o título
+    const titleElement = element.querySelector('#video-title') || 
+                        element.querySelector('a#video-title-link') ||
+                        element.querySelector('h3 a') ||
+                        element.querySelector('a[href*="/watch"]');
     
-    if (!contentElement) {
-      console.log('[Filtros] ⚠️ Elemento de conteúdo não encontrado');
-      return null;
-    }
-    
-    // Seletores diferentes para rich-item vs outros
-    const titleElement = contentElement.querySelector('#video-title') || 
-                        contentElement.querySelector('a#video-title-link') ||
-                        contentElement.querySelector('h3 a');
-    
-    if (!titleElement) {
-      console.log('[Filtros] ⚠️ Elemento sem título, pulando...');
+    if (!titleElement || !titleElement.href || !titleElement.href.includes('/watch')) {
       return null;
     }
     
     const title = titleElement.textContent.trim();
+    if (!title) return null;
+    
     const url = titleElement.href;
     
-    const thumbnailElement = contentElement.querySelector('img');
+    const thumbnailElement = element.querySelector('img');
     const thumbnail = thumbnailElement?.src || '';
     
-    // Extrai visualizações e data do metadata
-    const metadataElement = contentElement.querySelector('#metadata-line') || 
-                           contentElement.querySelector('ytd-video-meta-block');
+    // Busca por metadata em todo o elemento (não apenas em um seletor específico)
+    const wholeText = element.textContent || '';
     
+    // Extrai visualizações usando regex
     let viewsText = '';
-    let publishDateText = '';
+    const viewsMatch = wholeText.match(/(\d+[.,]?\d*)\s*(mil|K|mi|M|milhões?|milhoes?)?\s*visualizaç(ões|oes)|(\d+[.,]?\d*)\s*(K|M)\s*views/i);
+    if (viewsMatch) {
+      viewsText = viewsMatch[0];
+    }
     
-    if (metadataElement) {
-      const allText = metadataElement.textContent || '';
-      
-      // Extrai visualizações
-      const viewsMatch = allText.match(/(\d+[.,]?\d*)\s*(mil|K|mi|M)?\s*(visualizações|visualizacao|views)/i);
-      if (viewsMatch) {
-        viewsText = viewsMatch[0];
-      }
-      
-      // Extrai data
-      const dateMatch = allText.match(/há\s+\d+\s+(segundo|minuto|hora|dia|semana|mês|mes|ano)s?/i);
-      if (dateMatch) {
-        publishDateText = dateMatch[0];
-      }
+    // Extrai data usando regex
+    let publishDateText = '';
+    const dateMatch = wholeText.match(/há\s+\d+\s+(segundo|minuto|hora|dia|semana|mês|mes|ano)s?/i) ||
+                     wholeText.match(/\d+\s+(segundo|minuto|hora|dia|semana|mês|mes|ano)s?\s+atrás/i);
+    if (dateMatch) {
+      publishDateText = dateMatch[0];
     }
     
     const views = parseViews(viewsText);
     const publishDate = parsePublishDate(publishDateText);
     
-    console.log(`[Filtros] ✓ "${title.substring(0, 40)}..." - Views: ${viewsText} (${views}) - Data: ${publishDateText}`);
+    console.log(`[Filtros] ✓ "${title.substring(0, 40)}..." - Views: "${viewsText}" (${views}) - Data: "${publishDateText}"`);
     
-    const durationElement = contentElement.querySelector('ytd-thumbnail-overlay-time-status-renderer span') ||
-                           contentElement.querySelector('span.ytd-thumbnail-overlay-time-status-renderer');
+    // Duração
+    const durationElement = element.querySelector('ytd-thumbnail-overlay-time-status-renderer span') ||
+                           element.querySelector('span.ytd-thumbnail-overlay-time-status-renderer') ||
+                           element.querySelector('#text.ytd-thumbnail-overlay-time-status-renderer');
     const duration = parseDuration(durationElement?.textContent || '0:00');
     
-    const channelElement = contentElement.querySelector('ytd-channel-name a') || 
-                          contentElement.querySelector('#channel-name a') ||
-                          contentElement.querySelector('yt-formatted-string.ytd-channel-name a');
+    // Canal
+    const channelElement = element.querySelector('ytd-channel-name a') || 
+                          element.querySelector('#channel-name a') ||
+                          element.querySelector('a[href*="/@"]') ||
+                          element.querySelector('a[href*="/channel/"]');
     const channelName = channelElement?.textContent.trim() || 'Unknown';
     const channelUrl = channelElement?.href || '';
     
-    const channelAvatarElement = contentElement.querySelector('#avatar img') || 
-                                contentElement.querySelector('ytd-channel-thumbnail img');
+    const channelAvatarElement = element.querySelector('#avatar img') || 
+                                element.querySelector('ytd-channel-thumbnail img') ||
+                                element.querySelector('img[height="36"]');
     const channelAvatar = channelAvatarElement?.src || '';
     
-    const subscribers = extractSubscribers(contentElement || element);
+    const subscribers = extractSubscribers(element);
     
     const hoursAgo = (Date.now() - publishDate) / (1000 * 60 * 60);
     const vph = hoursAgo > 0 ? Math.round(views / hoursAgo) : 0;
