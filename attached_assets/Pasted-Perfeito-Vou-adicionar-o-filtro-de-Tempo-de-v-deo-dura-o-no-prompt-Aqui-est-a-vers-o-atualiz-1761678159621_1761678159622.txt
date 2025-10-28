@@ -1,0 +1,142 @@
+Perfeito! Vou adicionar o filtro de "Tempo de vídeo" (duração) no prompt. Aqui está a versão atualizada:
+Prompt para Desenvolvimento da Extensão (ATUALIZADO)
+Preciso que você desenvolva uma extensão para Google Chrome chamada "Filtros" 
+que analisa e filtra vídeos do YouTube. A extensão deve ter as seguintes 
+características:
+
+**FUNCIONALIDADE PRINCIPAL:**
+- A extensão deve adicionar um ícone na barra de ferramentas do Chrome
+- Quando ativada na página do YouTube, deve abrir um painel lateral overlay 
+  na página
+- O painel deve capturar todos os vídeos visíveis na página atual do YouTube
+- Deve extrair metadados de cada vídeo: título, visualizações, canal, 
+  assinantes do canal, tempo de publicação, duração, e calcular VPH 
+  (Visualizações Por Hora)
+
+**INTERFACE DO PAINEL LATERAL:**
+
+1. **Cabeçalho:**
+   - Logo e nome "Filtros"
+   - Botão "X" para fechar o painel
+   - Indicador "Mostrando X de Y vídeos"
+   - Botões: "Load more videos" e "Baixar CSV"
+
+2. **Filtros de Tipo:**
+   - Checkboxes para: Vídeos (marcado por padrão), Shorts, Live
+   - Dropdown "Ordenar por: Visualizações"
+
+3. **Filtros Laterais (com sliders):**
+
+   a) **Visualizações:**
+      - Slider de range duplo (min/max)
+      - Range: 0 a 10.000.000+
+      - Mostrar valores selecionados
+
+   b) **Assinantes:**
+      - Slider de range duplo
+      - Range: 0 a 10.000.000+
+      - Mostrar valores selecionados
+
+   c) **Tempo de vídeo (Duração):**
+      - Slider de range duplo
+      - Range: 0 a 180+ minutos
+      - Mostrar valores em formato MM:SS ou HH:MM:SS
+      - Opções rápidas (botões):
+        * Shorts (< 1 min)
+        * Curtos (1-5 min)
+        * Médios (5-20 min)
+        * Longos (20-60 min)
+        * Muito longos (60+ min)
+
+   d) **Visualizações por hora:**
+      - Slider de range duplo
+      - Range: 0 a 1.000+
+      - Badge "Upgrade" (funcionalidade premium)
+
+   e) **Outlier score:**
+      - Slider de range duplo
+      - Range: 0 a 100+
+      - Badge "Upgrade" (funcionalidade premium)
+
+   f) **Publish date:**
+      - Dropdown com opções:
+        * Last 24 hours
+        * Last 7 days
+        * Last 30 days
+        * Last 3 months
+        * Last year
+        * All time
+
+   g) **Botão "Reiniciar":**
+      - Reseta todos os filtros para valores padrão
+
+4. **Lista de Vídeos Filtrados:**
+   - Thumbnail do vídeo (clicável)
+   - Duração do vídeo (overlay no canto inferior direito da thumbnail)
+   - Título do vídeo
+   - Informações em linha:
+     * Número de visualizações
+     * Tempo desde publicação
+     * VPH (Visualizações Por Hora)
+   - Informações do canal:
+     * Avatar do canal
+     * Nome do canal
+     * Número de assinantes
+     * Badge "Remix" (se aplicável)
+
+**FUNCIONALIDADES TÉCNICAS:**
+
+1. **Extração de Dados:**
+   - Usar APIs do YouTube ou web scraping para extrair dados dos vídeos
+   - Capturar duração do vídeo e converter para segundos para filtragem
+   - Calcular VPH: (visualizações / horas desde publicação)
+   - Calcular Outlier score baseado em métricas de performance
+
+2. **Sistema de Filtros:**
+   - Filtragem em tempo real conforme usuário ajusta os sliders
+   - Filtrar por duração do vídeo em segundos
+   - Aplicar múltiplos filtros simultaneamente
+   - Atualizar contador "Mostrando X de Y vídeos"
+   - Botões de atalho para filtros rápidos de duração
+
+3. **Exportação:**
+   - Botão "Baixar CSV" deve exportar todos os vídeos filtrados com:
+     * Título, URL, Visualizações, Canal, Assinantes, Data de publicação, 
+       Duração (formato HH:MM:SS), VPH, Outlier score
+
+4. **Carregamento:**
+   - Botão "Load more videos" deve scrollar a página do YouTube e capturar 
+     mais vídeos
+
+**DESIGN:**
+- Tema dark (fundo escuro #1a1a1a, texto claro)
+- Painel lateral com largura fixa (~350-400px no lado esquerdo)
+- Área principal de vídeos com scroll independente
+- Sliders com estilo moderno (azul #4a9eff)
+- Badges e botões com bordas arredondadas
+- Duração do vídeo exibida em caixa preta semi-transparente no canto da 
+  thumbnail
+- Ícones claros e intuitivos
+- Botões de filtro rápido de duração com estilo pill/tag
+
+**TECNOLOGIAS SUGERIDAS:**
+- Manifest V3 para extensão Chrome
+- HTML/CSS/JavaScript vanilla ou React
+- Content Script para injetar o painel na página do YouTube
+- Background Script para processar dados
+- Storage API para salvar preferências do usuário
+
+**ARQUIVOS NECESSÁRIOS:**
+- manifest.json
+- popup.html (ícone da extensão)
+- content.js (script injetado no YouTube)
+- styles.css
+- background.js
+- Ícones da extensão (16x16, 48x48, 128x128)
+
+**OBSERVAÇÕES IMPORTANTES:**
+- A duração do vídeo já é exibida por padrão nas thumbnails do YouTube
+- O filtro deve converter durações para segundos internamente para comparação
+- Permitir ordenação por duração (crescente/decrescente)
+
+Por favor, desenvolva esta extensão completa e funcional.
