@@ -48,32 +48,35 @@ Uma extensão poderosa para Google Chrome que permite filtrar e analisar vídeos
 5. **Visualize Resultados**: Os vídeos serão filtrados em tempo real
 6. **Exporte Dados**: Clique em "Baixar CSV" para exportar os resultados
 
-## 🖥️ Pré-visualização da Interface
+## 🎨 Interface
 
-Antes de instalar a extensão no Chrome, você pode visualizar a interface:
-
-1. Execute `python -m http.server 5000` neste diretório
-2. Abra http://localhost:5000/test-panel.html no navegador
-3. Veja como a interface da extensão funciona
+A extensão apresenta um **painel modal centralizado** (similar ao VideoQ) ao invés de um painel lateral:
+- Modal centralizado com 90% da largura (max 1000px)
+- Backdrop escuro com blur
+- Design moderno com bordas arredondadas
+- Fácil fechamento clicando fora do painel
 
 ## 📊 Estrutura de Arquivos
 
 ```
 filtros-youtube-extension/
-├── manifest.json           # Configuração da extensão
+├── manifest.json           # Configuração da extensão (Manifest V3)
 ├── popup.html             # Interface do popup da extensão
 ├── popup.js               # Lógica do popup
-├── content.js             # Script injetado no YouTube
-├── panel.html             # HTML do painel lateral
+├── options.html           # Página de configurações (API Key)
+├── options.js             # Lógica das configurações
+├── content.js             # Script principal injetado no YouTube
+├── panel.html             # HTML do painel modal
 ├── panel.css              # Estilos do painel
 ├── background.js          # Service worker
-├── test-panel.html        # Página de teste da interface
 ├── icons/                 # Ícones da extensão
 │   ├── icon16.png
 │   ├── icon48.png
 │   ├── icon128.png
 │   └── icon.svg
-└── README.md              # Este arquivo
+├── README.md              # Documentação principal
+├── INSTRUCOES_INSTALACAO.md  # Guia de instalação
+└── COMO_USAR_API.md       # Tutorial da YouTube API
 ```
 
 ## 🎨 Filtros Disponíveis
