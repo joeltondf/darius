@@ -1,0 +1,126 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Filtros Panel</title>
+</head>
+<body>
+  <div id="filtros-panel" class="filtros-panel">
+    <div class="filtros-header">
+      <div class="filtros-logo">
+        <span class="logo-icon">🎬</span>
+        <span class="logo-text">Filtros</span>
+      </div>
+      <button id="closePanel" class="close-btn">✕</button>
+    </div>
+
+    <div class="filtros-stats">
+      <span id="videoCount">Mostrando 0 de 0 vídeos</span>
+    </div>
+
+    <div class="filtros-actions">
+      <button id="loadMoreBtn" class="action-btn primary">Load more videos</button>
+      <button id="exportCsvBtn" class="action-btn secondary">Baixar CSV</button>
+    </div>
+
+    <div class="filtros-type-filters">
+      <div class="type-checkboxes">
+        <label class="checkbox-label">
+          <input type="checkbox" id="filterVideos" checked>
+          <span>Vídeos</span>
+        </label>
+        <label class="checkbox-label">
+          <input type="checkbox" id="filterShorts">
+          <span>Shorts</span>
+        </label>
+        <label class="checkbox-label">
+          <input type="checkbox" id="filterLive">
+          <span>Live</span>
+        </label>
+      </div>
+      <div class="sort-select">
+        <label>Ordenar por:</label>
+        <select id="sortBy">
+          <option value="views">Visualizações</option>
+          <option value="vph">VPH</option>
+          <option value="duration">Duração</option>
+          <option value="publishDate">Data</option>
+          <option value="subscribers">Assinantes</option>
+        </select>
+      </div>
+    </div>
+
+    <div class="filtros-controls">
+      <div class="filter-group">
+        <label class="filter-label">Visualizações</label>
+        <div class="slider-container">
+          <input type="range" id="viewsMin" min="0" max="10000000" value="0" step="10000">
+          <input type="range" id="viewsMax" min="0" max="10000000" value="10000000" step="10000">
+        </div>
+        <div class="slider-values">
+          <span id="viewsMinVal">0</span>
+          <span id="viewsMaxVal">10M+</span>
+        </div>
+      </div>
+
+      <div class="filter-group">
+        <label class="filter-label">Assinantes</label>
+        <div class="slider-container">
+          <input type="range" id="subsMin" min="0" max="10000000" value="0" step="10000">
+          <input type="range" id="subsMax" min="0" max="10000000" value="10000000" step="10000">
+        </div>
+        <div class="slider-values">
+          <span id="subsMinVal">0</span>
+          <span id="subsMaxVal">10M+</span>
+        </div>
+      </div>
+
+      <div class="filter-group">
+        <label class="filter-label">Duração (minutos)</label>
+        <div class="slider-container">
+          <input type="range" id="durationMin" min="0" max="180" value="0" step="1">
+          <input type="range" id="durationMax" min="0" max="180" value="180" step="1">
+        </div>
+        <div class="slider-values">
+          <span id="durationMinVal">0:00</span>
+          <span id="durationMaxVal">180+</span>
+        </div>
+      </div>
+
+      <div class="filter-group">
+        <label class="filter-label">Visualizações por hora (VPH)</label>
+        <div class="slider-container">
+          <input type="range" id="vphMin" min="0" max="1000" value="0" step="10">
+          <input type="range" id="vphMax" min="0" max="1000" value="1000" step="10">
+        </div>
+        <div class="slider-values">
+          <span id="vphMinVal">0</span>
+          <span id="vphMaxVal">1000+</span>
+        </div>
+      </div>
+
+      <div class="filter-group">
+        <label class="filter-label">Data de publicação</label>
+        <select id="publishDateFilter" class="filter-select">
+          <option value="all">All time</option>
+          <option value="24h">Last 24 hours</option>
+          <option value="7d">Last 7 days</option>
+          <option value="30d">Last 30 days</option>
+          <option value="3m">Last 3 months</option>
+          <option value="1y">Last year</option>
+        </select>
+      </div>
+
+      <button id="resetFilters" class="reset-btn">Reiniciar Filtros</button>
+    </div>
+
+    <div class="filtros-videos" id="videoList">
+      <div class="loading-state">
+        <div class="loading-spinner"></div>
+        <p>Carregando vídeos...</p>
+      </div>
+    </div>
+  </div>
+</body>
+</html>

@@ -1,0 +1,72 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Filtros - YouTube Video Filter</title>
+  <style>
+    body {
+      width: 300px;
+      padding: 20px;
+      font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+      background: #1a1a1a;
+      color: #e0e0e0;
+      margin: 0;
+    }
+    h1 {
+      font-size: 20px;
+      margin: 0 0 10px 0;
+      color: #4a9eff;
+    }
+    p {
+      margin: 0 0 15px 0;
+      font-size: 14px;
+      line-height: 1.5;
+    }
+    button {
+      width: 100%;
+      padding: 12px;
+      background: #4a9eff;
+      color: white;
+      border: none;
+      border-radius: 6px;
+      font-size: 14px;
+      font-weight: 600;
+      cursor: pointer;
+      transition: background 0.2s;
+    }
+    button:hover {
+      background: #3a8eef;
+    }
+    button:active {
+      background: #2a7edf;
+    }
+    .status {
+      margin-top: 15px;
+      padding: 10px;
+      background: #2a2a2a;
+      border-radius: 6px;
+      font-size: 12px;
+      text-align: center;
+    }
+    .logo {
+      text-align: center;
+      margin-bottom: 15px;
+    }
+    .logo-icon {
+      font-size: 40px;
+      color: #4a9eff;
+    }
+  </style>
+</head>
+<body>
+  <div class="logo">
+    <div class="logo-icon">🎬</div>
+  </div>
+  <h1>Filtros</h1>
+  <p>Clique no botão abaixo quando estiver em uma página do YouTube para abrir o painel de filtros.</p>
+  <button id="togglePanel">Abrir Painel de Filtros</button>
+  <div class="status" id="status"></div>
+  <script src="popup.js"></script>
+</body>
+</html>
