@@ -674,32 +674,61 @@ function renderVideos() {
     return;
   }
   
-  videoList.innerHTML = filteredVideos.map(video => `
-    <div class="video-item" onclick="window.open('${video.url}', '_blank')">
-      <div class="video-thumbnail">
-        <img src="${video.thumbnail}" alt="${video.title}">
-        <div class="video-duration">${formatDuration(video.duration)}</div>
-      </div>
-      <div class="video-info">
-        <div class="video-title">${video.title}</div>
-        <div class="video-stats">
-          <span>👁️ ${formatNumber(video.views)}</span>
-          <span>•</span>
-          <span>${video.publishDateText}</span>
-          <span class="stat-badge vph">⚡ ${formatNumber(video.vph)} VPH</span>
+  videoList.innerHTML = filteredVideos.map(video => {
+    // Gera badges baseado nas características do vídeo
+    let badges = '';
+    
+    // Badge de tipo
+    if (video.type === 'live') {
+      badges += '<span class="video-badge badge-live">🔴 AO VIVO</span>';
+    } else if (video.type === 'short') {
+      badges += '<span class="video-badge badge-short">📱 Short</span>';
+    }
+    
+    // Badge de Remix (detecta no título)
+    if (video.title.toLowerCase().includes('remix') || video.title.toLowerCase().includes('react')) {
+      badges += '<span class="video-badge badge-remix">⚡ Remix</span>';
+    }
+    
+    // Badge de Novo (menos de 24h)
+    const hoursOld = (Date.now() - video.publishDate) / (1000 * 60 * 60);
+    if (hoursOld < 24) {
+      badges += '<span class="video-badge badge-new">✨ Novo</span>';
+    }
+    
+    // Badge de Trending (VPH alto)
+    if (video.vph > 1000) {
+      badges += '<span class="video-badge badge-trending">🔥 Trending</span>';
+    }
+    
+    return `
+      <div class="video-item" onclick="window.open('${video.url}', '_blank')">
+        <div class="video-thumbnail">
+          <img src="${video.thumbnail}" alt="${video.title}">
+          <div class="video-duration">${formatDuration(video.duration)}</div>
         </div>
-        <div class="video-channel">
-          <div class="channel-avatar">
-            ${video.channelAvatar ? `<img src="${video.channelAvatar}" alt="${video.channelName}">` : ''}
+        <div class="video-info">
+          <div class="video-title">${video.title}</div>
+          ${badges ? `<div class="video-badges">${badges}</div>` : ''}
+          <div class="video-stats">
+            <span>👁️ ${formatNumber(video.views)}</span>
+            <span>•</span>
+            <span>${video.publishDateText}</span>
+            <span class="stat-badge vph">⚡ ${formatNumber(video.vph)} VPH</span>
           </div>
-          <div class="channel-info">
-            <div class="channel-name">${video.channelName}</div>
-            <div class="channel-subs">${video.subscribers !== null ? formatNumber(video.subscribers) + ' inscritos' : 'Inscritos não disponíveis'}</div>
+          <div class="video-channel">
+            <div class="channel-avatar">
+              ${video.channelAvatar ? `<img src="${video.channelAvatar}" alt="${video.channelName}">` : ''}
+            </div>
+            <div class="channel-info">
+              <div class="channel-name">${video.channelName}</div>
+              <div class="channel-subs">${video.subscribers !== null ? formatNumber(video.subscribers) + ' inscritos' : 'Inscritos não disponíveis'}</div>
+            </div>
           </div>
         </div>
       </div>
-    </div>
-  `).join('');
+    `;
+  }).join('');
 }
 
 function formatDuration(seconds) {
