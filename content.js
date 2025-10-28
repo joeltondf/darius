@@ -181,16 +181,16 @@ async function captureVideos() {
     const video = extractVideoData(element);
     if (video) {
       allVideos.push(video);
-      console.log(`[Filtros] Vídeo #${index + 1}: "${video.title}" - Assinantes: ${video.subscribers !== null ? video.subscribers : 'null (não encontrado)'}`);
+      console.log(`[Filtros] Vídeo #${index + 1}: "${video.title}" - Inscritos: ${video.subscribers !== null ? video.subscribers : 'null (não encontrado)'}`);
       
       if (video.channelUrl && video.subscribers === null) {
         if (YOUTUBE_API_KEY) {
-          console.log(`[Filtros] Buscando assinantes via API para: ${video.channelName}`);
+          console.log(`[Filtros] Buscando inscritos via API para: ${video.channelName}`);
           videoDataPromises.push(
             fetchSubscriberCount(video.channelUrl).then(subs => {
               video.subscribers = subs;
               if (subs !== null) {
-                console.log(`[Filtros] ✓ API retornou ${subs} assinantes para ${video.channelName}`);
+                console.log(`[Filtros] ✓ API retornou ${subs} inscritos para ${video.channelName}`);
               }
             })
           );
@@ -207,10 +207,10 @@ async function captureVideos() {
   if (videoDataPromises.length > 0 && YOUTUBE_API_KEY) {
     console.log(`[Filtros] Aguardando ${videoDataPromises.length} requisições da API...`);
     await Promise.all(videoDataPromises);
-    console.log(`[Filtros] ✓ Atualizou contagem de assinantes de ${videoDataPromises.length} canais`);
+    console.log(`[Filtros] ✓ Atualizou contagem de inscritos de ${videoDataPromises.length} canais`);
     applyFilters();
   } else if (videoDataPromises.length > 0 && !YOUTUBE_API_KEY) {
-    console.warn('[Filtros] ⚠️ Para obter dados precisos de assinantes, configure sua API Key do YouTube em chrome://extensions');
+    console.warn('[Filtros] ⚠️ Para obter dados precisos de inscritos, configure sua API Key do YouTube em chrome://extensions');
   }
 }
 
@@ -474,7 +474,7 @@ async function fetchSubscriberCount(channelUrl) {
 
 function extractSubscribers(element) {
   try {
-    console.log('[Filtros] Tentando extrair assinantes do elemento:', element.tagName);
+    console.log('[Filtros] Tentando extrair inscritos do elemento:', element.tagName);
     
     const subElement = element.querySelector('ytd-video-meta-block #owner-sub-count');
     
@@ -483,15 +483,15 @@ function extractSubscribers(element) {
       console.log('[Filtros] Encontrou #owner-sub-count:', text);
       const result = parseSubscriberText(text);
       if (result !== null) {
-        console.log('[Filtros] ✓ Assinantes extraídos:', result);
+        console.log('[Filtros] ✓ Inscritos extraídos:', result);
         return result;
       }
     }
     
-    console.log('[Filtros] ✗ Não encontrou assinantes no DOM para este vídeo');
+    console.log('[Filtros] ✗ Não encontrou inscritos no DOM para este vídeo');
     return null;
   } catch (error) {
-    console.error('[Filtros] Erro ao extrair assinantes:', error);
+    console.error('[Filtros] Erro ao extrair inscritos:', error);
     return null;
   }
 }
@@ -608,7 +608,7 @@ function renderVideos() {
           </div>
           <div class="channel-info">
             <div class="channel-name">${video.channelName}</div>
-            <div class="channel-subs">${video.subscribers !== null ? formatNumber(video.subscribers) + ' assinantes' : 'Assinantes não disponíveis'}</div>
+            <div class="channel-subs">${video.subscribers !== null ? formatNumber(video.subscribers) + ' inscritos' : 'Inscritos não disponíveis'}</div>
           </div>
         </div>
       </div>
@@ -651,7 +651,7 @@ function loadMoreVideos() {
 }
 
 function exportToCSV() {
-  const headers = ['Título', 'URL', 'Visualizações', 'Canal', 'Assinantes', 'Data Publicação', 'Duração', 'VPH'];
+  const headers = ['Título', 'URL', 'Visualizações', 'Canal', 'Inscritos', 'Data Publicação', 'Duração', 'VPH'];
   const rows = filteredVideos.map(video => [
     `"${video.title.replace(/"/g, '""')}"`,
     video.url,

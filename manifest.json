@@ -2,7 +2,7 @@
   "manifest_version": 3,
   "name": "Filtros - YouTube Video Filter",
   "version": "1.0.0",
-  "description": "Filtre e analise vídeos do YouTube com filtros avançados de visualizações, assinantes, duração e VPH",
+  "description": "Filtre e analise vídeos do YouTube com filtros avançados de visualizações, inscritos, duração e VPH",
   "permissions": [
     "activeTab",
     "storage",
