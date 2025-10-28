@@ -197,17 +197,12 @@ function extractVideoData(element) {
     const channelAvatarElement = element.querySelector('#avatar img, ytd-channel-thumbnail img');
     const channelAvatar = channelAvatarElement?.src || '';
     
-    const subscribersElement = element.querySelector('#subscribers, .ytd-video-meta-block');
-    let subscribers = 0;
-    
-    if (channelUrl) {
-      subscribers = estimateSubscribers(channelUrl);
-    }
+    const subscribers = extractSubscribers(element);
     
     const hoursAgo = (Date.now() - publishDate) / (1000 * 60 * 60);
     const vph = hoursAgo > 0 ? Math.round(views / hoursAgo) : 0;
     
-    const type = determineVideoType(duration, url);
+    const type = determineVideoType(duration, url, element);
     
     return {
       title,
@@ -288,14 +283,49 @@ function parseDuration(durationText) {
   }
 }
 
-function determineVideoType(durationSeconds, url) {
+function determineVideoType(durationSeconds, url, element) {
+  if (element) {
+    const liveBadge = element.querySelector('.badge-style-type-live-now, ytd-badge-supported-renderer[aria-label*="LIVE"], [overlay-style="LIVE"]');
+    if (liveBadge) return 'live';
+  }
+  
   if (url && url.includes('/shorts/')) return 'short';
   if (durationSeconds < 60) return 'short';
   return 'video';
 }
 
-function estimateSubscribers(channelUrl) {
-  return Math.floor(Math.random() * 5000000);
+function extractSubscribers(element) {
+  try {
+    const subElements = [
+      element.querySelector('#metadata-line .ytd-video-meta-block'),
+      element.querySelector('.yt-simple-endpoint.ytd-video-meta-block'),
+      element.querySelector('[aria-label*="subscriber"], [aria-label*="assinante"]'),
+      element.querySelector('#subscriber-count')
+    ];
+    
+    for (const subElement of subElements) {
+      if (subElement && subElement.textContent) {
+        const subText = subElement.textContent.trim();
+        const match = subText.match(/(\d+[.,]?\d*)\s*(K|M|mil|mi)?/i);
+        if (match) {
+          let num = parseFloat(match[1].replace(',', '.'));
+          const multiplier = match[2];
+          if (multiplier) {
+            if (multiplier.match(/M|mi/i)) {
+              num *= 1000000;
+            } else if (multiplier.match(/K|mil/i)) {
+              num *= 1000;
+            }
+          }
+          return Math.floor(num);
+        }
+      }
+    }
+  } catch (error) {
+    console.log('Could not extract subscriber count:', error);
+  }
+  
+  return null;
 }
 
 function applyFilters() {
@@ -306,7 +336,10 @@ function applyFilters() {
     return false;
   }).filter(video => {
     if (video.views < filters.viewsMin || video.views > filters.viewsMax) return false;
-    if (video.subscribers < filters.subsMin || video.subscribers > filters.subsMax) return false;
+    
+    if (video.subscribers !== null) {
+      if (video.subscribers < filters.subsMin || video.subscribers > filters.subsMax) return false;
+    }
     
     const durationMinutes = video.duration / 60;
     if (durationMinutes < filters.durationMin || durationMinutes > filters.durationMax) return false;
@@ -389,7 +422,7 @@ function renderVideos() {
           </div>
           <div class="channel-info">
             <div class="channel-name">${video.channelName}</div>
-            <div class="channel-subs">${formatNumber(video.subscribers)} assinantes</div>
+            <div class="channel-subs">${video.subscribers !== null ? formatNumber(video.subscribers) + ' assinantes' : 'Assinantes não disponíveis'}</div>
           </div>
         </div>
       </div>
@@ -438,7 +471,7 @@ function exportToCSV() {
     video.url,
     video.views,
     `"${video.channelName.replace(/"/g, '""')}"`,
-    video.subscribers,
+    video.subscribers !== null ? video.subscribers : 'N/A',
     video.publishDateText,
     formatDuration(video.duration),
     video.vph
