@@ -122,8 +122,8 @@ function initializePanel() {
 function setupSlider(name, min, max) {
   const minSlider = document.getElementById(`${name}Min`);
   const maxSlider = document.getElementById(`${name}Max`);
-  const minVal = document.getElementById(`${name}MinVal`);
-  const maxVal = document.getElementById(`${name}MaxVal`);
+  const minInput = document.getElementById(`${name}MinInput`);
+  const maxInput = document.getElementById(`${name}MaxInput`);
   
   const updateValues = () => {
     const minValue = parseInt(minSlider.value);
@@ -139,14 +139,28 @@ function setupSlider(name, min, max) {
     filters[`${name}Min`] = parseInt(minSlider.value);
     filters[`${name}Max`] = parseInt(maxSlider.value);
     
-    minVal.textContent = formatValue(filters[`${name}Min`], name);
-    maxVal.textContent = formatValue(filters[`${name}Max`], name, true);
+    if (minInput) minInput.value = filters[`${name}Min`];
+    if (maxInput) maxInput.value = filters[`${name}Max`];
     
     applyFilters();
   };
   
+  const updateFromInput = () => {
+    if (minInput) {
+      const minValue = parseInt(minInput.value) || 0;
+      minSlider.value = Math.max(min, Math.min(max, minValue));
+    }
+    if (maxInput) {
+      const maxValue = parseInt(maxInput.value) || max;
+      maxSlider.value = Math.max(min, Math.min(max, maxValue));
+    }
+    updateValues();
+  };
+  
   minSlider.addEventListener('input', updateValues);
   maxSlider.addEventListener('input', updateValues);
+  if (minInput) minInput.addEventListener('change', updateFromInput);
+  if (maxInput) maxInput.addEventListener('change', updateFromInput);
 }
 
 function formatValue(value, type, isMax = false) {
@@ -178,35 +192,32 @@ function formatValue(value, type, isMax = false) {
 async function captureVideos() {
   allVideos = [];
   
-  // Debug: mostra todos os elementos ytd- na página
-  console.log('[Filtros] 🔍 DEBUG - Elementos ytd- na página:');
-  const allYtdElements = document.querySelectorAll('[id^="content"]');
-  console.log('[Filtros] Elementos com id="content":', allYtdElements.length);
-  
-  // Lista todos os custom elements do YouTube
-  const customElements = Array.from(document.querySelectorAll('*')).filter(el => el.tagName.startsWith('YTD-'));
-  const uniqueTags = [...new Set(customElements.map(el => el.tagName))];
-  console.log('[Filtros] 🔍 Custom elements únicos encontrados:', uniqueTags.slice(0, 20));
+  console.log('[Filtros] 🔍 Procurando vídeos na página...');
   
   // Tenta diferentes seletores dependendo da página
-  let videoElements = document.querySelectorAll('ytd-video-renderer');
-  console.log('[Filtros] ytd-video-renderer:', videoElements.length);
+  // Para páginas de watch (vídeos recomendados)
+  let videoElements = document.querySelectorAll('ytd-compact-video-renderer');
+  console.log('[Filtros] ytd-compact-video-renderer:', videoElements.length);
   
+  // Para páginas de resultados de busca
   if (videoElements.length === 0) {
-    videoElements = document.querySelectorAll('ytd-grid-video-renderer');
-    console.log('[Filtros] ytd-grid-video-renderer:', videoElements.length);
+    videoElements = document.querySelectorAll('ytd-video-renderer');
+    console.log('[Filtros] ytd-video-renderer:', videoElements.length);
   }
   
+  // Para páginas de home/canal
   if (videoElements.length === 0) {
     videoElements = document.querySelectorAll('ytd-rich-item-renderer');
     console.log('[Filtros] ytd-rich-item-renderer:', videoElements.length);
   }
   
+  // Para grid de vídeos
   if (videoElements.length === 0) {
-    videoElements = document.querySelectorAll('ytd-compact-video-renderer');
-    console.log('[Filtros] ytd-compact-video-renderer:', videoElements.length);
+    videoElements = document.querySelectorAll('ytd-grid-video-renderer');
+    console.log('[Filtros] ytd-grid-video-renderer:', videoElements.length);
   }
   
+  // Outro formato possível
   if (videoElements.length === 0) {
     videoElements = document.querySelectorAll('ytd-rich-grid-media');
     console.log('[Filtros] ytd-rich-grid-media:', videoElements.length);
@@ -923,19 +934,16 @@ function resetFilters() {
   document.getElementById('vphMax').value = 1000;
   document.getElementById('publishDateFilter').value = 'all';
   document.getElementById('hashtagFilter').value = '';
+  
+  if (document.getElementById('viewsMinInput')) document.getElementById('viewsMinInput').value = 0;
+  if (document.getElementById('viewsMaxInput')) document.getElementById('viewsMaxInput').value = 100000000;
+  if (document.getElementById('subsMinInput')) document.getElementById('subsMinInput').value = 0;
+  if (document.getElementById('subsMaxInput')) document.getElementById('subsMaxInput').value = 100000000;
+  
   document.getElementById('filterVideos').checked = true;
   document.getElementById('filterShorts').checked = false;
   document.getElementById('filterLive').checked = false;
   document.getElementById('sortBy').value = 'views';
-  
-  document.getElementById('viewsMinVal').textContent = '0';
-  document.getElementById('viewsMaxVal').textContent = '100M+';
-  document.getElementById('subsMinVal').textContent = '0';
-  document.getElementById('subsMaxVal').textContent = '100M+';
-  document.getElementById('durationMinVal').textContent = '0:00';
-  document.getElementById('durationMaxVal').textContent = '180+';
-  document.getElementById('vphMinVal').textContent = '0';
-  document.getElementById('vphMaxVal').textContent = '1000+';
   
   applyFilters();
 }
