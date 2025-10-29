@@ -213,35 +213,33 @@ async function captureVideos() {
   allVideos = [];
   
   console.log('[Filtros] 🔍 Procurando vídeos na página...');
+  console.log('[Filtros] URL atual:', window.location.href);
   
-  // Tenta diferentes seletores dependendo da página
-  // Para páginas de watch (vídeos recomendados)
-  let videoElements = document.querySelectorAll('ytd-compact-video-renderer');
-  console.log('[Filtros] ytd-compact-video-renderer:', videoElements.length);
+  // Tenta TODOS os seletores possíveis e combina os resultados
+  const selectors = [
+    'ytd-compact-video-renderer',           // Vídeos recomendados na watch page
+    'ytd-video-renderer',                   // Resultados de busca
+    'ytd-rich-item-renderer',               // Home/Canal
+    'ytd-grid-video-renderer',              // Grid de vídeos
+    'ytd-rich-grid-media',                  // Outro formato de grid
+    'ytd-playlist-panel-video-renderer',    // Playlist sidebar
+    'ytd-reel-item-renderer'                // Shorts
+  ];
   
-  // Para páginas de resultados de busca
-  if (videoElements.length === 0) {
-    videoElements = document.querySelectorAll('ytd-video-renderer');
-    console.log('[Filtros] ytd-video-renderer:', videoElements.length);
+  let videoElements = [];
+  
+  for (const selector of selectors) {
+    const elements = document.querySelectorAll(selector);
+    if (elements.length > 0) {
+      console.log(`[Filtros] ✓ ${selector}: ${elements.length}`);
+      videoElements = [...videoElements, ...Array.from(elements)];
+    } else {
+      console.log(`[Filtros] ✗ ${selector}: 0`);
+    }
   }
   
-  // Para páginas de home/canal
-  if (videoElements.length === 0) {
-    videoElements = document.querySelectorAll('ytd-rich-item-renderer');
-    console.log('[Filtros] ytd-rich-item-renderer:', videoElements.length);
-  }
-  
-  // Para grid de vídeos
-  if (videoElements.length === 0) {
-    videoElements = document.querySelectorAll('ytd-grid-video-renderer');
-    console.log('[Filtros] ytd-grid-video-renderer:', videoElements.length);
-  }
-  
-  // Outro formato possível
-  if (videoElements.length === 0) {
-    videoElements = document.querySelectorAll('ytd-rich-grid-media');
-    console.log('[Filtros] ytd-rich-grid-media:', videoElements.length);
-  }
+  // Remove duplicatas
+  videoElements = [...new Set(videoElements)];
   
   console.log(`[Filtros] ✓ Encontrou ${videoElements.length} elementos de vídeo na página`);
   if (videoElements.length > 0) {
@@ -891,7 +889,13 @@ function updateStats() {
 }
 
 function loadMoreVideos() {
-  window.scrollBy({ top: 1000, behavior: 'smooth' });
+  // Scroll down para carregar mais vídeos
+  const contentArea = document.querySelector('ytd-app');
+  if (contentArea) {
+    contentArea.scrollBy({ top: 1000, behavior: 'smooth' });
+  } else {
+    window.scrollBy({ top: 1000, behavior: 'smooth' });
+  }
   
   setTimeout(() => {
     captureVideos();
