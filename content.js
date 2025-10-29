@@ -349,51 +349,28 @@ function extractVideoFromYtData(data) {
     const publishDateText = data.publishedTimeText?.simpleText || 'Unknown';
     const publishDate = parsePublishDate(publishDateText);
     
-    // Duração - 3 métodos (PT-BR precisa do accessibility)
-    let durationText = null;
+    // Duração - MÉTODO SIMPLES que funciona
+    let durationText = data.lengthText?.simpleText || '0:00';
     
-    // Método 1: lengthText.simpleText
-    if (data.lengthText?.simpleText) {
-      durationText = data.lengthText.simpleText;
-    }
-    // Método 2: thumbnailOverlays
-    else if (data.thumbnailOverlays) {
+    // Se não tem, tenta thumbnailOverlays
+    if (durationText === '0:00' && data.thumbnailOverlays) {
       for (const overlay of data.thumbnailOverlays) {
-        const timeText = overlay.thumbnailOverlayTimeStatusRenderer?.text?.simpleText ||
-                        overlay.thumbnailOverlayTimeStatusRenderer?.text?.runs?.[0]?.text;
-        if (timeText) {
-          durationText = timeText;
+        const text = overlay.thumbnailOverlayTimeStatusRenderer?.text?.simpleText;
+        if (text) {
+          durationText = text;
           break;
         }
       }
     }
-    // Método 3: accessibility label (PT-BR e EN)
-    if (!durationText && data.lengthText?.accessibility?.accessibilityData?.label) {
-      const label = data.lengthText.accessibility.accessibilityData.label;
-      // Suporta: minutes/minutos, seconds/segundos, hours/horas (plural e singular)
-      const minMatch = label.match(/(\d+)\s+(?:minutos?|minutes?)/i);
-      const secMatch = label.match(/(\d+)\s+(?:segundos?|seconds?)/i);
-      const hourMatch = label.match(/(\d+)\s+(?:horas?|hours?)/i);
-      
-      if (hourMatch && minMatch) {
-        durationText = `${hourMatch[1]}:${minMatch[1].padStart(2, '0')}:00`;
-      } else if (minMatch && secMatch) {
-        durationText = `${minMatch[1]}:${secMatch[1].padStart(2, '0')}`;
-      } else if (minMatch) {
-        durationText = `${minMatch[1]}:00`;
-      } else if (secMatch) {
-        durationText = `0:${secMatch[1].padStart(2, '0')}`;
-      }
-    }
     
-    const duration = parseDuration(durationText || '0:00');
+    const duration = parseDuration(durationText);
     
     // Canal
     const channelName = data.longBylineText?.runs?.[0]?.text || data.shortBylineText?.runs?.[0]?.text || 'Unknown';
     const channelUrl = data.longBylineText?.runs?.[0]?.navigationEndpoint?.commandMetadata?.webCommandMetadata?.url || '';
     const channelAvatar = data.channelThumbnail?.thumbnails?.[0]?.url || '';
     
-    // Inscritos (não disponível no ytInitialData normalmente)
+    // Inscritos
     const subscribers = null;
     
     // VPH
@@ -402,7 +379,6 @@ function extractVideoFromYtData(data) {
     
     // Tipo
     const type = determineVideoType(duration, url, null);
-    
     
     return {
       title,
@@ -420,7 +396,6 @@ function extractVideoFromYtData(data) {
       type
     };
   } catch (error) {
-    console.log('[Filtros] ⚠️ Erro ao extrair dados ytData:', error);
     return null;
   }
 }
@@ -1039,9 +1014,8 @@ function renderVideos() {
 }
 
 function formatDuration(seconds) {
-  // Se não tem duração válida, pode ser Live ou vídeo sem duração
   if (!seconds || seconds === 0 || isNaN(seconds)) {
-    return 'LIVE';
+    return '0:00';
   }
   
   const hours = Math.floor(seconds / 3600);
