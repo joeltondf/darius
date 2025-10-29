@@ -221,42 +221,29 @@ async function captureVideos() {
   console.log('[Filtros] URL atual:', window.location.href);
   
   // Aguarda um pouco mais para garantir que o YouTube carregou
-  await new Promise(resolve => setTimeout(resolve, 500));
+  await new Promise(resolve => setTimeout(resolve, 1000));
   
   let videoElements = [];
   
-  // NOVA ABORDAGEM: Busca por links de vídeo (funciona com a estrutura atual do YouTube)
-  const videoLinks = document.querySelectorAll('a#video-title, a#video-title-link, a.yt-simple-endpoint[href*="/watch"]');
+  // Lista de seletores em ordem de prioridade
+  const selectors = [
+    'ytd-rich-item-renderer',               // Home/Feed (MAIS COMUM)
+    'ytd-video-renderer',                   // Resultados de busca
+    'ytd-grid-video-renderer',              // Grid de vídeos em canais
+    'ytd-compact-video-renderer',           // Vídeos recomendados na watch page
+    'ytd-rich-grid-media',                  // Outro formato de grid
+    'ytd-playlist-panel-video-renderer',    // Playlist sidebar
+    'ytd-reel-item-renderer'                // Shorts
+  ];
   
-  console.log(`[Filtros] ✓ Encontrou ${videoLinks.length} links de vídeo na página`);
-  
-  if (videoLinks.length > 0) {
-    // Usa os links como base para os elementos de vídeo
-    videoElements = Array.from(videoLinks).map(link => {
-      // Encontra o container pai que tem todas as informações do vídeo
-      return link.closest('ytd-compact-video-renderer, ytd-video-renderer, ytd-rich-item-renderer, ytd-grid-video-renderer, ytd-rich-grid-media, ytd-playlist-panel-video-renderer, ytd-reel-item-renderer, div[class*="video"], div[id*="dismissible"]') || link;
-    }).filter(el => el);
-  }
-  
-  // Fallback: Tenta os seletores antigos
-  if (videoElements.length === 0) {
-    console.log('[Filtros] ⚠️ Tentando seletores antigos...');
-    const selectors = [
-      'ytd-compact-video-renderer',
-      'ytd-video-renderer',
-      'ytd-rich-item-renderer',
-      'ytd-grid-video-renderer',
-      'ytd-rich-grid-media',
-      'ytd-playlist-panel-video-renderer',
-      'ytd-reel-item-renderer'
-    ];
-    
-    for (const selector of selectors) {
-      const elements = document.querySelectorAll(selector);
-      if (elements.length > 0) {
-        console.log(`[Filtros] ✓ ${selector}: ${elements.length}`);
-        videoElements = [...videoElements, ...Array.from(elements)];
-      }
+  // Busca usando todos os seletores
+  for (const selector of selectors) {
+    const elements = document.querySelectorAll(selector);
+    if (elements.length > 0) {
+      console.log(`[Filtros] ✓ ${selector}: ${elements.length}`);
+      videoElements = [...videoElements, ...Array.from(elements)];
+    } else {
+      console.log(`[Filtros] ✗ ${selector}: 0`);
     }
   }
   
