@@ -9,7 +9,7 @@ let filters = {
   durationMin: 0,
   durationMax: 180,
   vphMin: 0,
-  vphMax: 1000,
+  vphMax: 10000,
   publishDate: 'all',
   hashtags: '',
   showVideos: true,
@@ -121,7 +121,7 @@ function initializePanel() {
   setupSlider('views', 0, 100000000);
   setupSlider('subs', 0, 100000000);
   setupSlider('duration', 0, 180);
-  setupSlider('vph', 0, 1000);
+  setupSlider('vph', 0, 10000);
 }
 
 function setupSlider(name, min, max) {
@@ -995,7 +995,7 @@ function resetFilters() {
     durationMin: 0,
     durationMax: 180,
     vphMin: 0,
-    vphMax: 1000,
+    vphMax: 10000,
     publishDate: 'all',
     hashtags: '',
     showVideos: true,
@@ -1011,7 +1011,7 @@ function resetFilters() {
   document.getElementById('durationMin').value = 0;
   document.getElementById('durationMax').value = 180;
   document.getElementById('vphMin').value = 0;
-  document.getElementById('vphMax').value = 1000;
+  document.getElementById('vphMax').value = 10000;
   document.getElementById('publishDateFilter').value = 'all';
   document.getElementById('hashtagFilter').value = '';
   
@@ -1019,6 +1019,10 @@ function resetFilters() {
   if (document.getElementById('viewsMaxInput')) document.getElementById('viewsMaxInput').value = 100000000;
   if (document.getElementById('subsMinInput')) document.getElementById('subsMinInput').value = 0;
   if (document.getElementById('subsMaxInput')) document.getElementById('subsMaxInput').value = 100000000;
+  if (document.getElementById('durationMinInput')) document.getElementById('durationMinInput').value = 0;
+  if (document.getElementById('durationMaxInput')) document.getElementById('durationMaxInput').value = 180;
+  if (document.getElementById('vphMinInput')) document.getElementById('vphMinInput').value = 0;
+  if (document.getElementById('vphMaxInput')) document.getElementById('vphMaxInput').value = 10000;
   
   document.getElementById('filterVideos').checked = true;
   document.getElementById('filterShorts').checked = false;

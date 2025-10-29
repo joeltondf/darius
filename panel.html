@@ -81,21 +81,21 @@
           <input type="range" id="durationMin" min="0" max="180" value="0" step="1">
           <input type="range" id="durationMax" min="0" max="180" value="180" step="1">
         </div>
-        <div class="slider-values">
-          <span id="durationMinVal">0:00</span>
-          <span id="durationMaxVal">180+</span>
+        <div class="slider-inputs">
+          <input type="number" id="durationMinInput" class="filter-number-input" value="0" min="0" max="180">
+          <input type="number" id="durationMaxInput" class="filter-number-input" value="180" min="0" max="180">
         </div>
       </div>
 
       <div class="filter-group">
         <label class="filter-label">Visualizações por hora (VPH)</label>
         <div class="slider-container">
-          <input type="range" id="vphMin" min="0" max="1000" value="0" step="10">
-          <input type="range" id="vphMax" min="0" max="1000" value="1000" step="10">
+          <input type="range" id="vphMin" min="0" max="10000" value="0" step="100">
+          <input type="range" id="vphMax" min="0" max="10000" value="10000" step="100">
         </div>
-        <div class="slider-values">
-          <span id="vphMinVal">0</span>
-          <span id="vphMaxVal">1000+</span>
+        <div class="slider-inputs">
+          <input type="number" id="vphMinInput" class="filter-number-input" value="0" min="0" max="10000">
+          <input type="number" id="vphMaxInput" class="filter-number-input" value="10000" min="0" max="10000">
         </div>
       </div>
 
