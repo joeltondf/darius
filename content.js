@@ -840,15 +840,17 @@ function applyFilters() {
     // Filtro de duração (converte para minutos)
     const durationMinutes = video.duration / 60;
     
-    // Só aplica filtro de duração se não estiver nos valores padrão
-    if (filters.durationMax < 180) {
-      if (durationMinutes < filters.durationMin || durationMinutes > filters.durationMax) {
-        console.log(`[Filtros] ✗ Vídeo filtrado por duração: ${durationMinutes.toFixed(1)}min (range: ${filters.durationMin}-${filters.durationMax})`);
-        return false;
-      }
-    } else if (filters.durationMin > 0) {
-      if (durationMinutes < filters.durationMin) {
-        return false;
+    // IGNORA vídeos sem duração (0) do filtro
+    if (video.duration > 0) {
+      // Só aplica filtro de duração se não estiver nos valores padrão
+      if (filters.durationMax < 180) {
+        if (durationMinutes < filters.durationMin || durationMinutes > filters.durationMax) {
+          return false;
+        }
+      } else if (filters.durationMin > 0) {
+        if (durationMinutes < filters.durationMin) {
+          return false;
+        }
       }
     }
     
