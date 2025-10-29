@@ -139,28 +139,48 @@ function setupSlider(name, min, max) {
     filters[`${name}Min`] = parseInt(minSlider.value);
     filters[`${name}Max`] = parseInt(maxSlider.value);
     
+    // Atualiza os inputs sem disparar eventos
     if (minInput) minInput.value = filters[`${name}Min`];
     if (maxInput) maxInput.value = filters[`${name}Max`];
     
     applyFilters();
   };
   
-  const updateFromInput = () => {
-    if (minInput) {
-      const minValue = parseInt(minInput.value) || 0;
-      minSlider.value = Math.max(min, Math.min(max, minValue));
+  const updateFromInput = (isMin) => {
+    if (isMin && minInput) {
+      let minValue = parseInt(minInput.value);
+      if (isNaN(minValue) || minValue < min) minValue = min;
+      if (minValue > max) minValue = max;
+      minSlider.value = minValue;
+      filters[`${name}Min`] = minValue;
+      minInput.value = minValue;
+    } else if (!isMin && maxInput) {
+      let maxValue = parseInt(maxInput.value);
+      if (isNaN(maxValue) || maxValue < min) maxValue = min;
+      if (maxValue > max) maxValue = max;
+      maxSlider.value = maxValue;
+      filters[`${name}Max`] = maxValue;
+      maxInput.value = maxValue;
     }
-    if (maxInput) {
-      const maxValue = parseInt(maxInput.value) || max;
-      maxSlider.value = Math.max(min, Math.min(max, maxValue));
-    }
-    updateValues();
+    applyFilters();
   };
   
   minSlider.addEventListener('input', updateValues);
   maxSlider.addEventListener('input', updateValues);
-  if (minInput) minInput.addEventListener('change', updateFromInput);
-  if (maxInput) maxInput.addEventListener('change', updateFromInput);
+  
+  if (minInput) {
+    minInput.addEventListener('blur', () => updateFromInput(true));
+    minInput.addEventListener('keypress', (e) => {
+      if (e.key === 'Enter') updateFromInput(true);
+    });
+  }
+  
+  if (maxInput) {
+    maxInput.addEventListener('blur', () => updateFromInput(false));
+    maxInput.addEventListener('keypress', (e) => {
+      if (e.key === 'Enter') updateFromInput(false);
+    });
+  }
 }
 
 function formatValue(value, type, isMax = false) {
