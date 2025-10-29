@@ -227,69 +227,94 @@ async function captureVideos() {
   
   // WATCH PAGE: Extrai dados de ytInitialData (shadow DOM não é acessível)
   if (window.location.pathname.includes('/watch')) {
-    console.log('[Filtros] 📺 Watch page detectada - extraindo de ytInitialData...');
+    console.log('[Filtros] 📺 Watch page detectada!');
+    console.log('[Filtros] URL completa:', window.location.href);
     
     try {
       const ytData = window.ytInitialData;
+      console.log('[Filtros] ========== DEBUG ytInitialData ==========');
       console.log('[Filtros] ytInitialData existe?', !!ytData);
       
-      if (ytData) {
-        console.log('[Filtros] ytData.contents existe?', !!ytData.contents);
-        console.log('[Filtros] twoColumnWatchNextResults existe?', !!ytData.contents?.twoColumnWatchNextResults);
-        console.log('[Filtros] secondaryResults existe?', !!ytData.contents?.twoColumnWatchNextResults?.secondaryResults);
-      }
-      
-      if (ytData?.contents?.twoColumnWatchNextResults?.secondaryResults?.secondaryResults?.results) {
-        const results = ytData.contents.twoColumnWatchNextResults.secondaryResults.secondaryResults.results;
-        
-        console.log(`[Filtros] ✓ Encontrou ${results.length} itens em ytInitialData`);
-        
-        // Processa cada vídeo do ytInitialData
-        results.forEach((item, index) => {
-          if (item.compactVideoRenderer) {
-            const video = extractVideoFromYtData(item.compactVideoRenderer);
-            if (video) {
-              allVideos.push(video);
-              console.log(`[Filtros] ✓ Vídeo #${index + 1}: "${video.title.substring(0, 30)}..." - Duração: ${video.duration}s`);
-            }
-          } else {
-            console.log(`[Filtros] ⚠️ Item #${index + 1} não é compactVideoRenderer:`, Object.keys(item)[0]);
-          }
-        });
-        
-        console.log(`[Filtros] ✓ Processou ${allVideos.length} vídeos de ytInitialData`);
-        updateVideoList();
-        return;
-      } else {
-        console.log('[Filtros] ⚠️ Estrutura ytInitialData não encontrada - tentando aguardar...');
-        
-        // Aguarda mais 2 segundos e tenta novamente
-        await new Promise(resolve => setTimeout(resolve, 2000));
+      if (!ytData) {
+        console.log('[Filtros] ❌ window.ytInitialData é NULL ou UNDEFINED');
+        console.log('[Filtros] Tentando aguardar 3 segundos...');
+        await new Promise(resolve => setTimeout(resolve, 3000));
         
         const ytDataRetry = window.ytInitialData;
-        if (ytDataRetry?.contents?.twoColumnWatchNextResults?.secondaryResults?.secondaryResults?.results) {
-          const results = ytDataRetry.contents.twoColumnWatchNextResults.secondaryResults.secondaryResults.results;
-          console.log(`[Filtros] ✓ RETRY - Encontrou ${results.length} itens em ytInitialData`);
-          
-          results.forEach(item => {
-            if (item.compactVideoRenderer) {
-              const video = extractVideoFromYtData(item.compactVideoRenderer);
-              if (video) {
-                allVideos.push(video);
-              }
-            }
-          });
-          
-          console.log(`[Filtros] ✓ RETRY - Processou ${allVideos.length} vídeos`);
-          updateVideoList();
+        console.log('[Filtros] Após espera - ytInitialData existe?', !!ytDataRetry);
+        
+        if (!ytDataRetry) {
+          console.log('[Filtros] ❌ FALHA TOTAL - ytInitialData não está disponível');
+          console.log('[Filtros] Propriedades do window:', Object.keys(window).filter(k => k.includes('yt')));
           return;
-        } else {
-          console.log('[Filtros] ✗ RETRY FALHOU - ytInitialData ainda não disponível');
         }
       }
+      
+      const data = ytData || window.ytInitialData;
+      
+      // Debug completo da estrutura
+      console.log('[Filtros] Estrutura disponível:');
+      console.log('[Filtros] - contents:', !!data.contents);
+      
+      if (data.contents) {
+        console.log('[Filtros] - contents.twoColumnWatchNextResults:', !!data.contents.twoColumnWatchNextResults);
+        
+        if (data.contents.twoColumnWatchNextResults) {
+          console.log('[Filtros] - secondaryResults:', !!data.contents.twoColumnWatchNextResults.secondaryResults);
+          
+          if (data.contents.twoColumnWatchNextResults.secondaryResults) {
+            const sr = data.contents.twoColumnWatchNextResults.secondaryResults;
+            console.log('[Filtros] - secondaryResults.secondaryResults:', !!sr.secondaryResults);
+            
+            if (sr.secondaryResults) {
+              console.log('[Filtros] - secondaryResults.secondaryResults.results:', !!sr.secondaryResults.results);
+              
+              if (sr.secondaryResults.results) {
+                const results = sr.secondaryResults.results;
+                console.log(`[Filtros] ✅ SUCESSO! Encontrou ${results.length} itens`);
+                console.log('[Filtros] Primeiro item:', Object.keys(results[0] || {}));
+                
+                // Processa cada vídeo
+                results.forEach((item, index) => {
+                  if (item.compactVideoRenderer) {
+                    const video = extractVideoFromYtData(item.compactVideoRenderer);
+                    if (video) {
+                      allVideos.push(video);
+                    }
+                  } else if (item.continuationItemRenderer) {
+                    console.log(`[Filtros] Item #${index + 1}: continuationItemRenderer (ignorado)`);
+                  } else {
+                    console.log(`[Filtros] Item #${index + 1}: ${Object.keys(item)[0]}`);
+                  }
+                });
+                
+                console.log(`[Filtros] ✅ Total processado: ${allVideos.length} vídeos`);
+                updateVideoList();
+                return;
+              } else {
+                console.log('[Filtros] ❌ results não existe!');
+              }
+            } else {
+              console.log('[Filtros] ❌ secondaryResults.secondaryResults não existe!');
+              console.log('[Filtros] Chaves disponíveis:', Object.keys(sr));
+            }
+          } else {
+            console.log('[Filtros] ❌ secondaryResults não existe!');
+          }
+        } else {
+          console.log('[Filtros] ❌ twoColumnWatchNextResults não existe!');
+          console.log('[Filtros] Chaves em contents:', Object.keys(data.contents));
+        }
+      } else {
+        console.log('[Filtros] ❌ contents não existe!');
+        console.log('[Filtros] Chaves do ytInitialData:', Object.keys(data));
+      }
+      
+      console.log('[Filtros] ========================================');
+      
     } catch (error) {
-      console.log('[Filtros] ⚠️ Erro ao extrair ytInitialData:', error);
-      console.log('[Filtros] Stack:', error.stack);
+      console.log('[Filtros] ❌ ERRO CRÍTICO:', error.message);
+      console.log('[Filtros] Stack completo:', error.stack);
     }
   }
   
