@@ -225,20 +225,22 @@ async function captureVideos() {
   
   let videoElements = [];
   
-  // WATCH PAGE: Extrai dados de ytInitialData
+  // WATCH PAGE: Extrai dados de ytInitialData com retry
   if (window.location.pathname.includes('/watch')) {
     console.log('[Filtros] Watch page detectada');
     
-    try {
-      // Aguarda 2s para garantir que ytInitialData carregou
-      await new Promise(resolve => setTimeout(resolve, 2000));
+    // Tenta até 3 vezes com intervalos crescentes
+    const delays = [1500, 2000, 2500]; // Total: 6s
+    
+    for (let attempt = 0; attempt < delays.length; attempt++) {
+      await new Promise(resolve => setTimeout(resolve, delays[attempt]));
       
       const ytData = window.ytInitialData;
       
       if (ytData?.contents?.twoColumnWatchNextResults?.secondaryResults?.secondaryResults?.results) {
         const results = ytData.contents.twoColumnWatchNextResults.secondaryResults.secondaryResults.results;
         
-        console.log(`[Filtros] Encontrou ${results.length} vídeos recomendados`);
+        console.log(`[Filtros] Encontrou ${results.length} vídeos (tentativa ${attempt + 1})`);
         
         results.forEach(item => {
           if (item.compactVideoRenderer) {
@@ -249,16 +251,17 @@ async function captureVideos() {
           }
         });
         
-        console.log(`[Filtros] Processou ${allVideos.length} vídeos`);
-        updateVideoList();
-        return;
-      } else {
-        console.log('[Filtros] ytInitialData não disponível ou estrutura diferente');
-        console.log('[Filtros] Tentando buscar no DOM...');
+        if (allVideos.length > 0) {
+          console.log(`[Filtros] Processou ${allVideos.length} vídeos com sucesso`);
+          updateVideoList();
+          return;
+        }
       }
-    } catch (error) {
-      console.log('[Filtros] Erro ao processar watch page:', error.message);
+      
+      console.log(`[Filtros] Tentativa ${attempt + 1} - nenhum vídeo encontrado`);
     }
+    
+    console.log('[Filtros] Watch page: nenhum vídeo encontrado após 3 tentativas');
   }
   
   // HOME/FEED/SEARCH: Busca normal no DOM
@@ -348,11 +351,15 @@ function extractVideoFromYtData(data) {
     const publishDateText = data.publishedTimeText?.simpleText || 'Unknown';
     const publishDate = parsePublishDate(publishDateText);
     
-    // Duração
-    let durationText = data.lengthText?.simpleText || '0:00';
+    // Duração - 3 métodos (PT-BR precisa do accessibility)
+    let durationText = null;
     
-    // Se não tem em lengthText, tenta thumbnailOverlays
-    if (durationText === '0:00' && data.thumbnailOverlays) {
+    // Método 1: lengthText.simpleText
+    if (data.lengthText?.simpleText) {
+      durationText = data.lengthText.simpleText;
+    }
+    // Método 2: thumbnailOverlays
+    else if (data.thumbnailOverlays) {
       for (const overlay of data.thumbnailOverlays) {
         const timeText = overlay.thumbnailOverlayTimeStatusRenderer?.text?.simpleText ||
                         overlay.thumbnailOverlayTimeStatusRenderer?.text?.runs?.[0]?.text;
@@ -362,8 +369,30 @@ function extractVideoFromYtData(data) {
         }
       }
     }
+    // Método 3: accessibility label (CRÍTICO para PT-BR!)
+    if (!durationText && data.lengthText?.accessibility?.accessibilityData?.label) {
+      const label = data.lengthText.accessibility.accessibilityData.label;
+      // Extrai "10 minutos e 35 segundos" -> "10:35" (plural OU singular)
+      const minMatch = label.match(/(\d+)\s+minutos?/i);
+      const secMatch = label.match(/(\d+)\s+segundos?/i);
+      const hourMatch = label.match(/(\d+)\s+horas?/i);
+      
+      if (hourMatch && minMatch) {
+        // "1 hora e 30 minutos" -> "1:30:00"
+        durationText = `${hourMatch[1]}:${minMatch[1].padStart(2, '0')}:00`;
+      } else if (minMatch && secMatch) {
+        // "10 minutos e 35 segundos" -> "10:35"
+        durationText = `${minMatch[1]}:${secMatch[1].padStart(2, '0')}`;
+      } else if (minMatch) {
+        // "10 minutos" -> "10:00"
+        durationText = `${minMatch[1]}:00`;
+      } else if (secMatch) {
+        // "35 segundos" -> "0:35"
+        durationText = `0:${secMatch[1].padStart(2, '0')}`;
+      }
+    }
     
-    const duration = parseDuration(durationText);
+    const duration = parseDuration(durationText || '0:00');
     
     // Canal
     const channelName = data.longBylineText?.runs?.[0]?.text || data.shortBylineText?.runs?.[0]?.text || 'Unknown';
