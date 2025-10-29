@@ -280,10 +280,10 @@ function extractVideoData(element) {
       viewsText = viewsMatch[0];
     }
     
-    // Extrai data usando regex
+    // Extrai data usando regex (aceita plural e "mes" sem acento)
     let publishDateText = '';
-    const dateMatch = wholeText.match(/há\s+\d+\s+(segundo|minuto|hora|dia|semana|mês|mes|ano)s?/i) ||
-                     wholeText.match(/\d+\s+(segundo|minuto|hora|dia|semana|mês|mes|ano)s?\s+atrás/i);
+    const dateMatch = wholeText.match(/há\s+\d+\s+(segundos?|minutos?|horas?|dias?|semanas?|m[eê]s(?:es)?|anos?)/i) ||
+                     wholeText.match(/\d+\s+(segundos?|minutos?|horas?|dias?|semanas?|m[eê]s(?:es)?|anos?)\s+atrás/i);
     if (dateMatch) {
       publishDateText = dateMatch[0];
     }
@@ -370,11 +370,32 @@ function parseViews(viewsText) {
 function parsePublishDate(dateText) {
   const now = Date.now();
   
-  const match = dateText.match(/(\d+)\s*(segundo|minuto|hora|dia|semana|mês|ano|second|minute|hour|day|week|month|year)/i);
-  if (!match) return now;
+  // Regex atualizado para aceitar plural e "mes" sem acento
+  const match = dateText.match(/(\d+)\s*(segundos?|minutos?|horas?|dias?|semanas?|m[eê]s(?:es)?|anos?|seconds?|minutes?|hours?|days?|weeks?|months?|years?)/i);
+  if (!match) {
+    console.log('[Filtros] ⚠️ Data não reconhecida:', dateText);
+    return now;
+  }
   
   const value = parseInt(match[1]);
   const unit = match[2].toLowerCase();
+  
+  // Normaliza o texto para a forma singular
+  const normalizedUnit = unit
+    .replace(/segundos?/i, 'segundo')
+    .replace(/minutos?/i, 'minuto')
+    .replace(/horas?/i, 'hora')
+    .replace(/dias?/i, 'dia')
+    .replace(/semanas?/i, 'semana')
+    .replace(/m[eê]s(?:es)?/i, 'mês')
+    .replace(/anos?/i, 'ano')
+    .replace(/seconds?/i, 'second')
+    .replace(/minutes?/i, 'minute')
+    .replace(/hours?/i, 'hour')
+    .replace(/days?/i, 'day')
+    .replace(/weeks?/i, 'week')
+    .replace(/months?/i, 'month')
+    .replace(/years?/i, 'year');
   
   const multipliers = {
     'segundo': 1000,
@@ -393,8 +414,12 @@ function parsePublishDate(dateText) {
     'year': 365 * 24 * 60 * 60 * 1000
   };
   
-  const multiplier = multipliers[unit] || 0;
-  return now - (value * multiplier);
+  const multiplier = multipliers[normalizedUnit] || 0;
+  const calculatedDate = now - (value * multiplier);
+  
+  console.log(`[Filtros] 📅 Data: "${dateText}" = ${value} ${normalizedUnit} atrás`);
+  
+  return calculatedDate;
 }
 
 function parseDuration(durationText) {
