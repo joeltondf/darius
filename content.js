@@ -227,17 +227,50 @@ async function captureVideos() {
   
   // WATCH PAGE: Extrai dados de ytInitialData (shadow DOM não é acessível)
   if (window.location.pathname.includes('/watch')) {
-    console.log('[Filtros] 📺 Watch page - extraindo de ytInitialData...');
+    console.log('[Filtros] 📺 Watch page detectada - extraindo de ytInitialData...');
     
     try {
       const ytData = window.ytInitialData;
-      if (ytData?.contents?.twoColumnWatchNextResults?.secondaryResults) {
+      console.log('[Filtros] ytInitialData existe?', !!ytData);
+      
+      if (ytData) {
+        console.log('[Filtros] ytData.contents existe?', !!ytData.contents);
+        console.log('[Filtros] twoColumnWatchNextResults existe?', !!ytData.contents?.twoColumnWatchNextResults);
+        console.log('[Filtros] secondaryResults existe?', !!ytData.contents?.twoColumnWatchNextResults?.secondaryResults);
+      }
+      
+      if (ytData?.contents?.twoColumnWatchNextResults?.secondaryResults?.secondaryResults?.results) {
         const results = ytData.contents.twoColumnWatchNextResults.secondaryResults.secondaryResults.results;
         
-        if (results && Array.isArray(results)) {
-          console.log(`[Filtros] ✓ Encontrou ${results.length} resultados em ytInitialData`);
+        console.log(`[Filtros] ✓ Encontrou ${results.length} itens em ytInitialData`);
+        
+        // Processa cada vídeo do ytInitialData
+        results.forEach((item, index) => {
+          if (item.compactVideoRenderer) {
+            const video = extractVideoFromYtData(item.compactVideoRenderer);
+            if (video) {
+              allVideos.push(video);
+              console.log(`[Filtros] ✓ Vídeo #${index + 1}: "${video.title.substring(0, 30)}..." - Duração: ${video.duration}s`);
+            }
+          } else {
+            console.log(`[Filtros] ⚠️ Item #${index + 1} não é compactVideoRenderer:`, Object.keys(item)[0]);
+          }
+        });
+        
+        console.log(`[Filtros] ✓ Processou ${allVideos.length} vídeos de ytInitialData`);
+        updateVideoList();
+        return;
+      } else {
+        console.log('[Filtros] ⚠️ Estrutura ytInitialData não encontrada - tentando aguardar...');
+        
+        // Aguarda mais 2 segundos e tenta novamente
+        await new Promise(resolve => setTimeout(resolve, 2000));
+        
+        const ytDataRetry = window.ytInitialData;
+        if (ytDataRetry?.contents?.twoColumnWatchNextResults?.secondaryResults?.secondaryResults?.results) {
+          const results = ytDataRetry.contents.twoColumnWatchNextResults.secondaryResults.secondaryResults.results;
+          console.log(`[Filtros] ✓ RETRY - Encontrou ${results.length} itens em ytInitialData`);
           
-          // Processa cada vídeo do ytInitialData
           results.forEach(item => {
             if (item.compactVideoRenderer) {
               const video = extractVideoFromYtData(item.compactVideoRenderer);
@@ -247,13 +280,16 @@ async function captureVideos() {
             }
           });
           
-          console.log(`[Filtros] ✓ Processou ${allVideos.length} vídeos de ytInitialData`);
+          console.log(`[Filtros] ✓ RETRY - Processou ${allVideos.length} vídeos`);
           updateVideoList();
           return;
+        } else {
+          console.log('[Filtros] ✗ RETRY FALHOU - ytInitialData ainda não disponível');
         }
       }
     } catch (error) {
       console.log('[Filtros] ⚠️ Erro ao extrair ytInitialData:', error);
+      console.log('[Filtros] Stack:', error.stack);
     }
   }
   
@@ -344,9 +380,29 @@ function extractVideoFromYtData(data) {
     const publishDateText = data.publishedTimeText?.simpleText || 'Unknown';
     const publishDate = parsePublishDate(publishDateText);
     
-    // Duração
-    const durationText = data.lengthText?.simpleText || data.thumbnailOverlays?.find(o => o.thumbnailOverlayTimeStatusRenderer)?.thumbnailOverlayTimeStatusRenderer?.text?.simpleText || '0:00';
+    // Duração - MÚLTIPLAS tentativas
+    let durationText = '0:00';
+    
+    // Tenta lengthText primeiro
+    if (data.lengthText?.simpleText) {
+      durationText = data.lengthText.simpleText;
+    } 
+    // Tenta accessibilityText
+    else if (data.lengthText?.accessibility?.accessibilityData?.label) {
+      durationText = data.lengthText.accessibility.accessibilityData.label;
+    }
+    // Tenta thumbnailOverlays
+    else if (data.thumbnailOverlays) {
+      for (const overlay of data.thumbnailOverlays) {
+        if (overlay.thumbnailOverlayTimeStatusRenderer?.text?.simpleText) {
+          durationText = overlay.thumbnailOverlayTimeStatusRenderer.text.simpleText;
+          break;
+        }
+      }
+    }
+    
     const duration = parseDuration(durationText);
+    console.log(`[Filtros DEBUG] Duração extraída: "${durationText}" -> ${duration}s`);
     
     // Canal
     const channelName = data.longBylineText?.runs?.[0]?.text || data.shortBylineText?.runs?.[0]?.text || 'Unknown';
@@ -363,7 +419,7 @@ function extractVideoFromYtData(data) {
     // Tipo
     const type = determineVideoType(duration, url, null);
     
-    console.log(`[Filtros] ✓ ytData: "${title.substring(0, 40)}..." - Views: ${views} - VPH: ${vph}`);
+    console.log(`[Filtros] ✓ ytData: "${title.substring(0, 40)}..." - Duração: ${durationText} (${duration}s) - Views: ${views} - VPH: ${vph}`);
     
     return {
       title,
