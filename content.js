@@ -59,7 +59,12 @@ function openPanel() {
       document.body.appendChild(container);
       panelVisible = true;
       initializePanel();
-      captureVideos();
+      
+      // Aguarda 1.5s para o YouTube carregar os vídeos
+      console.log('[Filtros] Aguardando YouTube carregar vídeos...');
+      setTimeout(() => {
+        captureVideos();
+      }, 1500);
     });
 }
 
@@ -215,6 +220,9 @@ async function captureVideos() {
   console.log('[Filtros] 🔍 Procurando vídeos na página...');
   console.log('[Filtros] URL atual:', window.location.href);
   
+  // Aguarda um pouco mais para garantir que o YouTube carregou
+  await new Promise(resolve => setTimeout(resolve, 500));
+  
   // Tenta TODOS os seletores possíveis e combina os resultados
   const selectors = [
     'ytd-compact-video-renderer',           // Vídeos recomendados na watch page
@@ -228,6 +236,18 @@ async function captureVideos() {
   
   let videoElements = [];
   
+  // Primeiro tenta buscar especificamente na área de vídeos recomendados (watch page)
+  const secondaryResults = document.querySelector('ytd-watch-next-secondary-results-renderer');
+  if (secondaryResults) {
+    console.log('[Filtros] ✓ Encontrou área de vídeos recomendados');
+    const compactVideos = secondaryResults.querySelectorAll('ytd-compact-video-renderer');
+    if (compactVideos.length > 0) {
+      console.log(`[Filtros] ✓ ytd-compact-video-renderer (área recomendados): ${compactVideos.length}`);
+      videoElements = [...videoElements, ...Array.from(compactVideos)];
+    }
+  }
+  
+  // Depois busca em toda a página com todos os seletores
   for (const selector of selectors) {
     const elements = document.querySelectorAll(selector);
     if (elements.length > 0) {
