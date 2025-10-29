@@ -405,90 +405,45 @@ function extractVideoFromYtData(data) {
     const publishDateText = data.publishedTimeText?.simpleText || 'Unknown';
     const publishDate = parsePublishDate(publishDateText);
     
-    // Duração - MÚLTIPLAS tentativas (ordem de prioridade)
-    let durationText = null;
+    // Duração - Extração simplificada e robusta
+    let durationText = '0:00';
+    let durationSeconds = 0;
+    let durationMethod = 'nenhum';
     
-    // MÉTODO 1: lengthText.simpleText (mais comum)
-    if (!durationText && data.lengthText?.simpleText) {
+    // MÉTODO 1: lengthText.simpleText (formato "10:35")
+    if (data.lengthText?.simpleText) {
       durationText = data.lengthText.simpleText;
+      durationSeconds = parseDuration(durationText);
+      durationMethod = 'lengthText.simpleText';
     }
-    
-    // MÉTODO 2: thumbnailOverlays (segunda opção mais comum)
-    if (!durationText && data.thumbnailOverlays) {
+    // MÉTODO 2: thumbnailOverlays
+    else if (data.thumbnailOverlays && Array.isArray(data.thumbnailOverlays)) {
       for (const overlay of data.thumbnailOverlays) {
-        if (overlay.thumbnailOverlayTimeStatusRenderer?.text?.simpleText) {
-          durationText = overlay.thumbnailOverlayTimeStatusRenderer.text.simpleText;
-          break;
-        }
-        if (overlay.thumbnailOverlayTimeStatusRenderer?.text?.runs?.[0]?.text) {
-          durationText = overlay.thumbnailOverlayTimeStatusRenderer.text.runs[0].text;
-          break;
-        }
-      }
-    }
-    
-    // MÉTODO 3: accessibility label (converte texto para formato de tempo)
-    if (!durationText && data.lengthText?.accessibility?.accessibilityData?.label) {
-      const fullLabel = data.lengthText.accessibility.accessibilityData.label;
-      
-      // Tenta formatos diferentes
-      let match;
-      
-      // "10 minutos, 35 segundos" ou "10 minutes, 35 seconds"
-      match = fullLabel.match(/(\d+)\s*(?:minuto|minute)[s]?,?\s*(\d+)\s*(?:segundo|second)[s]?/i);
-      if (match) {
-        durationText = `${match[1]}:${match[2].padStart(2, '0')}`;
-      }
-      
-      // "1 hora, 10 minutos" ou "1 hour, 10 minutes"
-      if (!durationText) {
-        match = fullLabel.match(/(\d+)\s*(?:hora|hour)[s]?,?\s*(\d+)\s*(?:minuto|minute)[s]?/i);
-        if (match) {
-          durationText = `${match[1]}:${match[2].padStart(2, '0')}:00`;
-        }
-      }
-      
-      // Apenas segundos: "45 segundos" ou "45 seconds"
-      if (!durationText) {
-        match = fullLabel.match(/(\d+)\s*(?:segundo|second)[s]?/i);
-        if (match) {
-          durationText = `0:${match[1].padStart(2, '0')}`;
-        }
-      }
-      
-      // Apenas minutos: "10 minutos" ou "10 minutes"
-      if (!durationText) {
-        match = fullLabel.match(/(\d+)\s*(?:minuto|minute)[s]?/i);
-        if (match) {
-          durationText = `${match[1]}:00`;
-        }
-      }
-    }
-    
-    // Se AINDA não encontrou, tenta parsear direto do JSON com tentativa genérica
-    if (!durationText && data.lengthText) {
-      // Procura por qualquer propriedade que possa ter o tempo
-      const searchForDuration = (obj) => {
-        if (typeof obj === 'string' && /^\d+:\d+/.test(obj)) {
-          return obj;
-        }
-        if (typeof obj === 'object' && obj !== null) {
-          for (const key in obj) {
-            const result = searchForDuration(obj[key]);
-            if (result) return result;
+        const timeStatus = overlay.thumbnailOverlayTimeStatusRenderer;
+        if (timeStatus?.text) {
+          if (timeStatus.text.simpleText) {
+            durationText = timeStatus.text.simpleText;
+            durationSeconds = parseDuration(durationText);
+            durationMethod = 'thumbnailOverlays.simpleText';
+            break;
+          } else if (timeStatus.text.runs?.[0]?.text) {
+            durationText = timeStatus.text.runs[0].text;
+            durationSeconds = parseDuration(durationText);
+            durationMethod = 'thumbnailOverlays.runs[0]';
+            break;
           }
         }
-        return null;
-      };
-      durationText = searchForDuration(data.lengthText);
+      }
     }
     
-    // ÚLTIMO RECURSO: Padrão seguro
-    if (!durationText) {
-      durationText = '0:00';
+    // Log debug apenas se não conseguiu extrair
+    if (durationSeconds === 0 || !durationText || durationText === '0:00') {
+      console.log(`[Filtros] ⚠️ Duração não extraída para "${title.substring(0, 30)}..."`);
+      console.log('[Filtros] data.lengthText:', data.lengthText);
+      console.log('[Filtros] data.thumbnailOverlays:', data.thumbnailOverlays);
     }
     
-    const duration = parseDuration(durationText);
+    const duration = durationSeconds;
     
     // Canal
     const channelName = data.longBylineText?.runs?.[0]?.text || data.shortBylineText?.runs?.[0]?.text || 'Unknown';
@@ -505,7 +460,7 @@ function extractVideoFromYtData(data) {
     // Tipo
     const type = determineVideoType(duration, url, null);
     
-    console.log(`[Filtros] ✓ ytData: "${title.substring(0, 40)}..." - Duração: ${durationText} (${duration}s) - Views: ${views} - VPH: ${vph}`);
+    console.log(`[Filtros] ✓ Vídeo: "${title.substring(0, 35)}..." | Duração: ${durationText} (${duration}s via ${durationMethod}) | Views: ${formatNumber(views)} | VPH: ${formatNumber(vph)}`);
     
     return {
       title,
