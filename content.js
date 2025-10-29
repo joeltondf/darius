@@ -597,27 +597,40 @@ function parseSubscriberText(text) {
 
 function applyFilters() {
   filteredVideos = allVideos.filter(video => {
-    // Se nenhum filtro de tipo estiver ativo, mostra todos
+    // Filtro de tipo de vídeo
     const hasTypeFilter = filters.showVideos || filters.showShorts || filters.showLive;
-    if (!hasTypeFilter) return true;
-    
-    // Caso contrário, filtra por tipo
-    if (filters.showVideos && video.type === 'video') return true;
-    if (filters.showShorts && video.type === 'short') return true;
-    if (filters.showLive && video.type === 'live') return true;
-    return false;
-  }).filter(video => {
-    if (video.views < filters.viewsMin || video.views > filters.viewsMax) return false;
-    
-    if (video.subscribers !== null) {
-      if (video.subscribers < filters.subsMin || video.subscribers > filters.subsMax) return false;
+    if (hasTypeFilter) {
+      let typeMatches = false;
+      if (filters.showVideos && video.type === 'video') typeMatches = true;
+      if (filters.showShorts && video.type === 'short') typeMatches = true;
+      if (filters.showLive && video.type === 'live') typeMatches = true;
+      if (!typeMatches) return false;
     }
     
+    // Filtro de visualizações
+    if (video.views < filters.viewsMin || video.views > filters.viewsMax) {
+      return false;
+    }
+    
+    // Filtro de inscritos (apenas se o valor estiver disponível)
+    if (video.subscribers !== null) {
+      if (video.subscribers < filters.subsMin || video.subscribers > filters.subsMax) {
+        return false;
+      }
+    }
+    
+    // Filtro de duração (converte para minutos)
     const durationMinutes = video.duration / 60;
-    if (durationMinutes < filters.durationMin || durationMinutes > filters.durationMax) return false;
+    if (durationMinutes < filters.durationMin || durationMinutes > filters.durationMax) {
+      return false;
+    }
     
-    if (video.vph < filters.vphMin || video.vph > filters.vphMax) return false;
+    // Filtro de VPH
+    if (video.vph < filters.vphMin || video.vph > filters.vphMax) {
+      return false;
+    }
     
+    // Filtro de data de publicação
     if (filters.publishDate !== 'all') {
       const now = Date.now();
       const diff = now - video.publishDate;
@@ -631,7 +644,9 @@ function applyFilters() {
         '1y': 24 * 365
       };
       
-      if (hoursDiff > limits[filters.publishDate]) return false;
+      if (hoursDiff > limits[filters.publishDate]) {
+        return false;
+      }
     }
     
     return true;
@@ -679,31 +694,32 @@ function renderVideos() {
   const averageVph = allVideos.length > 0 ? totalVph / allVideos.length : 1;
   
   videoList.innerHTML = filteredVideos.map(video => {
-    // Gera badges baseado nas características do vídeo
-    let badges = '';
+    // Gera badges baseado nas características do vídeo (máximo 2 badges)
+    const badgesList = [];
     
-    // Badge de tipo
+    // Prioridade 1: Badge de tipo (mais importante)
     if (video.type === 'live') {
-      badges += '<span class="video-badge badge-live">🔴 AO VIVO</span>';
+      badgesList.push('<span class="video-badge badge-live">🔴 AO VIVO</span>');
     } else if (video.type === 'short') {
-      badges += '<span class="video-badge badge-short">📱 Short</span>';
+      badgesList.push('<span class="video-badge badge-short">📱 Short</span>');
     }
     
-    // Badge de Remix (detecta no título)
-    if (video.title.toLowerCase().includes('remix') || video.title.toLowerCase().includes('react')) {
-      badges += '<span class="video-badge badge-remix">⚡ Remix</span>';
-    }
-    
-    // Badge de Novo (menos de 24h)
+    // Prioridade 2: Badge de Novo (menos de 24h)
     const hoursOld = (Date.now() - video.publishDate) / (1000 * 60 * 60);
-    if (hoursOld < 24) {
-      badges += '<span class="video-badge badge-new">✨ Novo</span>';
+    if (hoursOld < 24 && badgesList.length < 2) {
+      badgesList.push('<span class="video-badge badge-new">✨ Novo</span>');
     }
     
-    // Badge de Trending (VPH alto)
-    if (video.vph > 1000) {
-      badges += '<span class="video-badge badge-trending">🔥 Trending</span>';
+    // Prioridade 3: Badge de Trending (VPH alto) ou Remix
+    if (badgesList.length < 2) {
+      if (video.vph > 1000) {
+        badgesList.push('<span class="video-badge badge-trending">🔥 Trending</span>');
+      } else if (video.title.toLowerCase().includes('remix') || video.title.toLowerCase().includes('react')) {
+        badgesList.push('<span class="video-badge badge-remix">⚡ Remix</span>');
+      }
     }
+    
+    const badges = badgesList.join('');
     
     // Calcula multiplicador de VPH (quantas vezes acima da média)
     const vphMultiplier = averageVph > 0 ? video.vph / averageVph : 0;
