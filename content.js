@@ -225,12 +225,44 @@ async function captureVideos() {
   
   let videoElements = [];
   
-  // Lista de seletores em ordem de prioridade
+  // WATCH PAGE: Extrai dados de ytInitialData (shadow DOM não é acessível)
+  if (window.location.pathname.includes('/watch')) {
+    console.log('[Filtros] 📺 Watch page - extraindo de ytInitialData...');
+    
+    try {
+      const ytData = window.ytInitialData;
+      if (ytData?.contents?.twoColumnWatchNextResults?.secondaryResults) {
+        const results = ytData.contents.twoColumnWatchNextResults.secondaryResults.secondaryResults.results;
+        
+        if (results && Array.isArray(results)) {
+          console.log(`[Filtros] ✓ Encontrou ${results.length} resultados em ytInitialData`);
+          
+          // Processa cada vídeo do ytInitialData
+          results.forEach(item => {
+            if (item.compactVideoRenderer) {
+              const video = extractVideoFromYtData(item.compactVideoRenderer);
+              if (video) {
+                allVideos.push(video);
+              }
+            }
+          });
+          
+          console.log(`[Filtros] ✓ Processou ${allVideos.length} vídeos de ytInitialData`);
+          updateVideoList();
+          return;
+        }
+      }
+    } catch (error) {
+      console.log('[Filtros] ⚠️ Erro ao extrair ytInitialData:', error);
+    }
+  }
+  
+  // HOME/FEED/SEARCH: Busca normal no DOM
   const selectors = [
     'ytd-rich-item-renderer',               // Home/Feed (MAIS COMUM)
     'ytd-video-renderer',                   // Resultados de busca
     'ytd-grid-video-renderer',              // Grid de vídeos em canais
-    'ytd-compact-video-renderer',           // Vídeos recomendados na watch page
+    'ytd-compact-video-renderer',           // Vídeos recomendados (fallback)
     'ytd-rich-grid-media',                  // Outro formato de grid
     'ytd-playlist-panel-video-renderer',    // Playlist sidebar
     'ytd-reel-item-renderer'                // Shorts
@@ -244,42 +276,6 @@ async function captureVideos() {
       videoElements = [...videoElements, ...Array.from(elements)];
     } else {
       console.log(`[Filtros] ✗ ${selector}: 0`);
-    }
-  }
-  
-  // Se ainda não encontrou nada E está em watch page, força busca na sidebar
-  if (videoElements.length === 0 && window.location.pathname.includes('/watch')) {
-    console.log('[Filtros] ⚠️ Watch page detectada - tentando métodos alternativos...');
-    
-    // Espera mais 3 segundos
-    await new Promise(resolve => setTimeout(resolve, 3000));
-    
-    // Tenta buscar por qualquer elemento que tenha link de vídeo
-    console.log('[Filtros] 🔍 Buscando por qualquer estrutura de vídeo...');
-    
-    // Tenta novamente só os compact videos
-    const compactVideos = document.querySelectorAll('ytd-compact-video-renderer');
-    console.log(`[Filtros] TENTATIVA 2 - ytd-compact-video-renderer: ${compactVideos.length}`);
-    
-    if (compactVideos.length > 0) {
-      videoElements = Array.from(compactVideos);
-    } else {
-      // Busca em todo o documento por links de vídeo
-      const allVideoLinks = document.querySelectorAll('a[href*="/watch?v="]');
-      console.log(`[Filtros] TENTATIVA 3 - Links de vídeo encontrados: ${allVideoLinks.length}`);
-      
-      if (allVideoLinks.length > 0) {
-        // Pega os 20 primeiros containers únicos
-        const containers = new Set();
-        allVideoLinks.forEach(link => {
-          const container = link.closest('ytd-compact-video-renderer, ytd-video-renderer, div[id*="dismissible"]');
-          if (container && !containers.has(container)) {
-            containers.add(container);
-          }
-        });
-        videoElements = Array.from(containers);
-        console.log(`[Filtros] ✓ Containers únicos encontrados: ${videoElements.length}`);
-      }
     }
   }
   
@@ -327,6 +323,66 @@ async function captureVideos() {
     applyFilters();
   } else if (videoDataPromises.length > 0 && !YOUTUBE_API_KEY) {
     console.warn('[Filtros] ⚠️ Para obter dados precisos de inscritos, configure sua API Key do YouTube em chrome://extensions');
+  }
+}
+
+function extractVideoFromYtData(data) {
+  try {
+    const videoId = data.videoId;
+    const title = data.title?.simpleText || data.title?.runs?.[0]?.text || 'Sem título';
+    const url = `https://www.youtube.com/watch?v=${videoId}`;
+    
+    // Thumbnail
+    const thumbnails = data.thumbnail?.thumbnails || [];
+    const thumbnail = thumbnails[thumbnails.length - 1]?.url || '';
+    
+    // Visualizações
+    const viewsText = data.viewCountText?.simpleText || data.shortViewCountText?.simpleText || '0';
+    const views = parseViews(viewsText);
+    
+    // Data de publicação
+    const publishDateText = data.publishedTimeText?.simpleText || 'Unknown';
+    const publishDate = parsePublishDate(publishDateText);
+    
+    // Duração
+    const durationText = data.lengthText?.simpleText || data.thumbnailOverlays?.find(o => o.thumbnailOverlayTimeStatusRenderer)?.thumbnailOverlayTimeStatusRenderer?.text?.simpleText || '0:00';
+    const duration = parseDuration(durationText);
+    
+    // Canal
+    const channelName = data.longBylineText?.runs?.[0]?.text || data.shortBylineText?.runs?.[0]?.text || 'Unknown';
+    const channelUrl = data.longBylineText?.runs?.[0]?.navigationEndpoint?.commandMetadata?.webCommandMetadata?.url || '';
+    const channelAvatar = data.channelThumbnail?.thumbnails?.[0]?.url || '';
+    
+    // Inscritos (não disponível no ytInitialData normalmente)
+    const subscribers = null;
+    
+    // VPH
+    const hoursAgo = (Date.now() - publishDate) / (1000 * 60 * 60);
+    const vph = hoursAgo > 0 ? Math.round(views / hoursAgo) : 0;
+    
+    // Tipo
+    const type = determineVideoType(duration, url, null);
+    
+    console.log(`[Filtros] ✓ ytData: "${title.substring(0, 40)}..." - Views: ${views} - VPH: ${vph}`);
+    
+    return {
+      title,
+      url,
+      thumbnail,
+      views,
+      channelName,
+      channelUrl,
+      channelAvatar,
+      subscribers,
+      publishDate,
+      publishDateText,
+      duration,
+      vph,
+      type
+    };
+  } catch (error) {
+    console.log('[Filtros] ⚠️ Erro ao extrair dados ytData:', error);
+    return null;
   }
 }
 
