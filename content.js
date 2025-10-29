@@ -369,27 +369,29 @@ function extractVideoFromYtData(data) {
         }
       }
     }
-    // Método 3: accessibility label (CRÍTICO para PT-BR!)
+    // Método 3: accessibility label (PT-BR e EN)
     if (!durationText && data.lengthText?.accessibility?.accessibilityData?.label) {
       const label = data.lengthText.accessibility.accessibilityData.label;
-      // Extrai "10 minutos e 35 segundos" -> "10:35" (plural OU singular)
-      const minMatch = label.match(/(\d+)\s+minutos?/i);
-      const secMatch = label.match(/(\d+)\s+segundos?/i);
-      const hourMatch = label.match(/(\d+)\s+horas?/i);
+      // Suporta: minutes/minutos, seconds/segundos, hours/horas (plural e singular)
+      const minMatch = label.match(/(\d+)\s+(?:minutos?|minutes?)/i);
+      const secMatch = label.match(/(\d+)\s+(?:segundos?|seconds?)/i);
+      const hourMatch = label.match(/(\d+)\s+(?:horas?|hours?)/i);
       
       if (hourMatch && minMatch) {
-        // "1 hora e 30 minutos" -> "1:30:00"
         durationText = `${hourMatch[1]}:${minMatch[1].padStart(2, '0')}:00`;
       } else if (minMatch && secMatch) {
-        // "10 minutos e 35 segundos" -> "10:35"
         durationText = `${minMatch[1]}:${secMatch[1].padStart(2, '0')}`;
       } else if (minMatch) {
-        // "10 minutos" -> "10:00"
         durationText = `${minMatch[1]}:00`;
       } else if (secMatch) {
-        // "35 segundos" -> "0:35"
         durationText = `0:${secMatch[1].padStart(2, '0')}`;
       }
+    }
+    
+    // DEBUG: Log se duração não foi encontrada
+    if (!durationText || durationText === '0:00') {
+      console.log(`[Filtros] ⚠️ Sem duração para "${title.substring(0, 25)}..."`);
+      console.log('[Filtros] lengthText:', JSON.stringify(data.lengthText));
     }
     
     const duration = parseDuration(durationText || '0:00');
