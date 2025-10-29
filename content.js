@@ -60,11 +60,11 @@ function openPanel() {
       panelVisible = true;
       initializePanel();
       
-      // Aguarda 1.5s para o YouTube carregar os vídeos
+      // Aguarda 3s para o YouTube carregar os vídeos
       console.log('[Filtros] Aguardando YouTube carregar vídeos...');
       setTimeout(() => {
         captureVideos();
-      }, 1500);
+      }, 3000);
     });
 }
 
@@ -221,7 +221,7 @@ async function captureVideos() {
   console.log('[Filtros] URL atual:', window.location.href);
   
   // Aguarda um pouco mais para garantir que o YouTube carregou
-  await new Promise(resolve => setTimeout(resolve, 1000));
+  await new Promise(resolve => setTimeout(resolve, 1500));
   
   let videoElements = [];
   
@@ -244,6 +244,23 @@ async function captureVideos() {
       videoElements = [...videoElements, ...Array.from(elements)];
     } else {
       console.log(`[Filtros] ✗ ${selector}: 0`);
+    }
+  }
+  
+  // Se ainda não encontrou nada E está em watch page, força busca na sidebar
+  if (videoElements.length === 0 && window.location.pathname.includes('/watch')) {
+    console.log('[Filtros] ⚠️ Watch page detectada - tentando métodos alternativos...');
+    
+    // Espera mais 2 segundos
+    await new Promise(resolve => setTimeout(resolve, 2000));
+    
+    // Tenta novamente só os compact videos
+    const compactVideos = document.querySelectorAll('ytd-compact-video-renderer');
+    if (compactVideos.length > 0) {
+      console.log(`[Filtros] ✓ SEGUNDO TENTE - ytd-compact-video-renderer: ${compactVideos.length}`);
+      videoElements = Array.from(compactVideos);
+    } else {
+      console.log('[Filtros] ✗ SEGUNDO TENTE - Ainda não encontrou vídeos');
     }
   }
   
