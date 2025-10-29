@@ -386,12 +386,6 @@ function extractVideoFromYtData(data) {
       }
     }
     
-    // DEBUG: Log se duração não foi encontrada
-    if (!durationText || durationText === '0:00') {
-      console.log(`[Filtros] ⚠️ Sem duração para "${title.substring(0, 25)}..."`);
-      console.log('[Filtros] lengthText:', JSON.stringify(data.lengthText));
-    }
-    
     const duration = parseDuration(durationText || '0:00');
     
     // Canal
@@ -1045,9 +1039,9 @@ function renderVideos() {
 }
 
 function formatDuration(seconds) {
-  // Se não tem duração válida, mostra placeholder
+  // Se não tem duração válida, pode ser Live ou vídeo sem duração
   if (!seconds || seconds === 0 || isNaN(seconds)) {
-    return '?:??';
+    return 'LIVE';
   }
   
   const hours = Math.floor(seconds / 3600);
