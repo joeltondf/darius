@@ -237,20 +237,18 @@ async function captureVideos() {
       
       if (!ytData) {
         console.log('[Filtros] ❌ window.ytInitialData é NULL ou UNDEFINED');
-        console.log('[Filtros] Tentando aguardar 3 segundos...');
-        await new Promise(resolve => setTimeout(resolve, 3000));
-        
-        const ytDataRetry = window.ytInitialData;
-        console.log('[Filtros] Após espera - ytInitialData existe?', !!ytDataRetry);
-        
-        if (!ytDataRetry) {
-          console.log('[Filtros] ❌ FALHA TOTAL - ytInitialData não está disponível');
-          console.log('[Filtros] Propriedades do window:', Object.keys(window).filter(k => k.includes('yt')));
-          return;
-        }
+        console.log('[Filtros] Tentando aguardar 4 segundos...');
+        await new Promise(resolve => setTimeout(resolve, 4000));
       }
       
-      const data = ytData || window.ytInitialData;
+      // Sempre pega a versão mais atual
+      const data = window.ytInitialData;
+      
+      if (!data) {
+        console.log('[Filtros] ❌ FALHA TOTAL - ytInitialData não disponível após 5.5s total');
+        console.log('[Filtros] Propriedades window com "yt":', Object.keys(window).filter(k => k.toLowerCase().includes('yt')));
+        return;
+      }
       
       // Debug completo da estrutura
       console.log('[Filtros] Estrutura disponível:');
