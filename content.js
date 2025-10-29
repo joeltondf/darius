@@ -381,28 +381,44 @@ function extractVideoFromYtData(data) {
     const publishDate = parsePublishDate(publishDateText);
     
     // Duração - MÚLTIPLAS tentativas
-    let durationText = '0:00';
+    let durationText = null;
     
     // Tenta lengthText primeiro
     if (data.lengthText?.simpleText) {
       durationText = data.lengthText.simpleText;
+      console.log(`[Filtros] ✓ Duração via lengthText.simpleText: "${durationText}"`);
     } 
     // Tenta accessibilityText
     else if (data.lengthText?.accessibility?.accessibilityData?.label) {
-      durationText = data.lengthText.accessibility.accessibilityData.label;
+      const fullLabel = data.lengthText.accessibility.accessibilityData.label;
+      // Extrai apenas o tempo (ex: "10 minutos, 35 segundos" -> "10:35")
+      const match = fullLabel.match(/(\d+)\s*minuto[s]?,?\s*(\d+)\s*segundo[s]?/) || 
+                    fullLabel.match(/(\d+)\s*hora[s]?,?\s*(\d+)\s*minuto[s]?/);
+      if (match) {
+        durationText = `${match[1]}:${match[2].padStart(2, '0')}`;
+        console.log(`[Filtros] ✓ Duração via accessibility: "${fullLabel}" -> "${durationText}"`);
+      }
     }
     // Tenta thumbnailOverlays
-    else if (data.thumbnailOverlays) {
+    if (!durationText && data.thumbnailOverlays) {
       for (const overlay of data.thumbnailOverlays) {
         if (overlay.thumbnailOverlayTimeStatusRenderer?.text?.simpleText) {
           durationText = overlay.thumbnailOverlayTimeStatusRenderer.text.simpleText;
+          console.log(`[Filtros] ✓ Duração via thumbnailOverlays: "${durationText}"`);
           break;
         }
       }
     }
     
+    // Se ainda não encontrou, tenta acessar o objeto completo para debug
+    if (!durationText) {
+      console.log(`[Filtros] ⚠️ Estrutura completa de lengthText:`, JSON.stringify(data.lengthText));
+      console.log(`[Filtros] ⚠️ Estrutura completa de thumbnailOverlays:`, JSON.stringify(data.thumbnailOverlays));
+      durationText = '0:00';
+    }
+    
     const duration = parseDuration(durationText);
-    console.log(`[Filtros DEBUG] Duração extraída: "${durationText}" -> ${duration}s`);
+    console.log(`[Filtros DEBUG] Duração FINAL: "${durationText}" -> ${duration}s para "${title.substring(0, 30)}..."`);
     
     // Canal
     const channelName = data.longBylineText?.runs?.[0]?.text || data.shortBylineText?.runs?.[0]?.text || 'Unknown';
@@ -1056,6 +1072,12 @@ function renderVideos() {
 }
 
 function formatDuration(seconds) {
+  // Se não tem duração válida, mostra placeholder
+  if (!seconds || seconds === 0) {
+    console.log('[Filtros] ⚠️ formatDuration recebeu valor inválido:', seconds);
+    return 'N/A';
+  }
+  
   const hours = Math.floor(seconds / 3600);
   const minutes = Math.floor((seconds % 3600) / 60);
   const secs = seconds % 60;
