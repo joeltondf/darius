@@ -325,9 +325,21 @@
   padding: 20px 24px;
   background: #1a1a1a;
   display: grid;
-  grid-template-columns: repeat(auto-fill, minmax(300px, 1fr));
+  grid-template-columns: repeat(3, 1fr);
   gap: 20px;
   align-content: start;
+}
+
+@media (max-width: 1200px) {
+  .filtros-videos {
+    grid-template-columns: repeat(2, 1fr);
+  }
+}
+
+@media (max-width: 800px) {
+  .filtros-videos {
+    grid-template-columns: 1fr;
+  }
 }
 
 .filtros-videos::-webkit-scrollbar {

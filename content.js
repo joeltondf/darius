@@ -3,9 +3,9 @@ let allVideos = [];
 let filteredVideos = [];
 let filters = {
   viewsMin: 0,
-  viewsMax: 10000000,
+  viewsMax: 100000000,
   subsMin: 0,
-  subsMax: 10000000,
+  subsMax: 100000000,
   durationMin: 0,
   durationMax: 180,
   vphMin: 0,
@@ -113,8 +113,8 @@ function initializePanel() {
     applyFilters();
   });
   
-  setupSlider('views', 0, 10000000);
-  setupSlider('subs', 0, 10000000);
+  setupSlider('views', 0, 100000000);
+  setupSlider('subs', 0, 100000000);
   setupSlider('duration', 0, 180);
   setupSlider('vph', 0, 1000);
 }
@@ -151,7 +151,7 @@ function setupSlider(name, min, max) {
 
 function formatValue(value, type, isMax = false) {
   if (type === 'views' || type === 'subs') {
-    if (isMax && value >= 10000000) return '10M+';
+    if (isMax && value >= 100000000) return '100M+';
     if (value >= 1000000) return (value / 1000000).toFixed(1) + 'M';
     if (value >= 1000) return (value / 1000).toFixed(0) + 'K';
     return value.toString();
@@ -299,11 +299,25 @@ function extractVideoData(element) {
     
     console.log(`[Filtros] ✓ "${title.substring(0, 40)}..." - Views: "${viewsText}" (${views}) - Data: "${publishDateText}"`);
     
-    // Duração
-    const durationElement = element.querySelector('ytd-thumbnail-overlay-time-status-renderer span') ||
-                           element.querySelector('span.ytd-thumbnail-overlay-time-status-renderer') ||
-                           element.querySelector('#text.ytd-thumbnail-overlay-time-status-renderer');
-    const duration = parseDuration(durationElement?.textContent || '0:00');
+    // Duração - tenta múltiplos seletores
+    const durationElement = element.querySelector('ytd-thumbnail-overlay-time-status-renderer span#text') ||
+                           element.querySelector('ytd-thumbnail-overlay-time-status-renderer') ||
+                           element.querySelector('.ytd-thumbnail-overlay-time-status-renderer') ||
+                           element.querySelector('span.style-scope.ytd-thumbnail-overlay-time-status-renderer');
+    
+    let durationText = durationElement?.textContent?.trim() || '';
+    
+    // Se não encontrou, busca no atributo aria-label da thumbnail
+    if (!durationText || durationText === '') {
+      const thumbnailOverlay = element.querySelector('[aria-label]');
+      if (thumbnailOverlay) {
+        const ariaMatch = thumbnailOverlay.getAttribute('aria-label')?.match(/(\d+:\d+)/);
+        if (ariaMatch) durationText = ariaMatch[1];
+      }
+    }
+    
+    const duration = parseDuration(durationText || '0:00');
+    console.log(`[Filtros] Duração extraída: "${durationText}" = ${duration}s`);
     
     // Canal
     const channelElement = element.querySelector('ytd-channel-name a') || 
@@ -683,7 +697,7 @@ function applyFilters() {
     }
     
     // Filtro de hashtags
-    if (filters.hashtags) {
+    if (filters.hashtags && filters.hashtags.trim().length > 0) {
       const searchHashtags = filters.hashtags
         .split(',')
         .map(tag => tag.trim())
@@ -693,10 +707,15 @@ function applyFilters() {
         const videoTitle = video.title.toLowerCase();
         const hasHashtag = searchHashtags.some(tag => {
           const cleanTag = tag.startsWith('#') ? tag : '#' + tag;
-          return videoTitle.includes(cleanTag);
+          const tagFound = videoTitle.includes(cleanTag);
+          if (tagFound) {
+            console.log(`[Filtros] ✓ Hashtag encontrada: "${cleanTag}" em "${video.title}"`);
+          }
+          return tagFound;
         });
         
         if (!hasHashtag) {
+          console.log(`[Filtros] ✗ Vídeo ignorado (sem hashtag): "${video.title}"`);
           return false;
         }
       }
@@ -879,9 +898,9 @@ function exportToCSV() {
 function resetFilters() {
   filters = {
     viewsMin: 0,
-    viewsMax: 10000000,
+    viewsMax: 100000000,
     subsMin: 0,
-    subsMax: 10000000,
+    subsMax: 100000000,
     durationMin: 0,
     durationMax: 180,
     vphMin: 0,
@@ -895,9 +914,9 @@ function resetFilters() {
   };
   
   document.getElementById('viewsMin').value = 0;
-  document.getElementById('viewsMax').value = 10000000;
+  document.getElementById('viewsMax').value = 100000000;
   document.getElementById('subsMin').value = 0;
-  document.getElementById('subsMax').value = 10000000;
+  document.getElementById('subsMax').value = 100000000;
   document.getElementById('durationMin').value = 0;
   document.getElementById('durationMax').value = 180;
   document.getElementById('vphMin').value = 0;
@@ -910,9 +929,9 @@ function resetFilters() {
   document.getElementById('sortBy').value = 'views';
   
   document.getElementById('viewsMinVal').textContent = '0';
-  document.getElementById('viewsMaxVal').textContent = '10M+';
+  document.getElementById('viewsMaxVal').textContent = '100M+';
   document.getElementById('subsMinVal').textContent = '0';
-  document.getElementById('subsMaxVal').textContent = '10M+';
+  document.getElementById('subsMaxVal').textContent = '100M+';
   document.getElementById('durationMinVal').textContent = '0:00';
   document.getElementById('durationMaxVal').textContent = '180+';
   document.getElementById('vphMinVal').textContent = '0';
