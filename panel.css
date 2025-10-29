@@ -280,6 +280,26 @@
   cursor: pointer;
 }
 
+.filter-input {
+  width: 100%;
+  padding: 8px 12px;
+  background: #252525;
+  border: 1px solid #333;
+  border-radius: 6px;
+  color: #e0e0e0;
+  font-size: 13px;
+  outline: none;
+  transition: border-color 0.2s;
+}
+
+.filter-input:focus {
+  border-color: #4a9eff;
+}
+
+.filter-input::placeholder {
+  color: #666;
+}
+
 .reset-btn {
   width: 100%;
   padding: 10px;

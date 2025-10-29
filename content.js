@@ -11,6 +11,7 @@ let filters = {
   vphMin: 0,
   vphMax: 1000,
   publishDate: 'all',
+  hashtags: '',
   showVideos: true,
   showShorts: false,
   showLive: false,
@@ -104,6 +105,11 @@ function initializePanel() {
   
   document.getElementById('publishDateFilter').addEventListener('change', (e) => {
     filters.publishDate = e.target.value;
+    applyFilters();
+  });
+  
+  document.getElementById('hashtagFilter').addEventListener('input', (e) => {
+    filters.hashtags = e.target.value.toLowerCase().trim();
     applyFilters();
   });
   
@@ -440,8 +446,10 @@ function determineVideoType(durationSeconds, url, element) {
     if (liveBadge) return 'live';
   }
   
+  // Shorts DEVEM ter /shorts/ na URL
   if (url && url.includes('/shorts/')) return 'short';
-  if (durationSeconds < 60) return 'short';
+  
+  // Caso contrário é vídeo normal (mesmo que seja curto)
   return 'video';
 }
 
@@ -674,6 +682,26 @@ function applyFilters() {
       }
     }
     
+    // Filtro de hashtags
+    if (filters.hashtags) {
+      const searchHashtags = filters.hashtags
+        .split(',')
+        .map(tag => tag.trim())
+        .filter(tag => tag.length > 0);
+      
+      if (searchHashtags.length > 0) {
+        const videoTitle = video.title.toLowerCase();
+        const hasHashtag = searchHashtags.some(tag => {
+          const cleanTag = tag.startsWith('#') ? tag : '#' + tag;
+          return videoTitle.includes(cleanTag);
+        });
+        
+        if (!hasHashtag) {
+          return false;
+        }
+      }
+    }
+    
     return true;
   });
   
@@ -729,9 +757,10 @@ function renderVideos() {
       badgesList.push('<span class="video-badge badge-short">📱 Short</span>');
     }
     
-    // Prioridade 2: Badge de Novo (menos de 24h)
+    // Prioridade 2: Badge de Novo (menos de 7 dias)
     const hoursOld = (Date.now() - video.publishDate) / (1000 * 60 * 60);
-    if (hoursOld < 24 && badgesList.length < 2) {
+    const daysOld = hoursOld / 24;
+    if (daysOld < 7 && badgesList.length < 2) {
       badgesList.push('<span class="video-badge badge-new">✨ Novo</span>');
     }
     
@@ -858,6 +887,7 @@ function resetFilters() {
     vphMin: 0,
     vphMax: 1000,
     publishDate: 'all',
+    hashtags: '',
     showVideos: true,
     showShorts: false,
     showLive: false,
@@ -873,6 +903,7 @@ function resetFilters() {
   document.getElementById('vphMin').value = 0;
   document.getElementById('vphMax').value = 1000;
   document.getElementById('publishDateFilter').value = 'all';
+  document.getElementById('hashtagFilter').value = '';
   document.getElementById('filterVideos').checked = true;
   document.getElementById('filterShorts').checked = false;
   document.getElementById('filterLive').checked = false;
