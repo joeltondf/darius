@@ -328,25 +328,42 @@ function extractVideoData(element) {
     
     console.log(`[Filtros] ✓ "${title.substring(0, 40)}..." - Views: "${viewsText}" (${views}) - Data: "${publishDateText}"`);
     
-    // Duração - tenta múltiplos seletores
-    const durationElement = element.querySelector('ytd-thumbnail-overlay-time-status-renderer span#text') ||
-                           element.querySelector('ytd-thumbnail-overlay-time-status-renderer') ||
-                           element.querySelector('.ytd-thumbnail-overlay-time-status-renderer') ||
-                           element.querySelector('span.style-scope.ytd-thumbnail-overlay-time-status-renderer');
+    // Duração - busca no overlay de tempo
+    let durationText = '';
     
-    let durationText = durationElement?.textContent?.trim() || '';
+    // Método 1: Busca no overlay de tempo
+    const timeOverlay = element.querySelector('ytd-thumbnail-overlay-time-status-renderer span.style-scope.ytd-thumbnail-overlay-time-status-renderer');
+    if (timeOverlay) {
+      durationText = timeOverlay.textContent?.trim() || '';
+    }
     
-    // Se não encontrou, busca no atributo aria-label da thumbnail
-    if (!durationText || durationText === '') {
-      const thumbnailOverlay = element.querySelector('[aria-label]');
-      if (thumbnailOverlay) {
-        const ariaMatch = thumbnailOverlay.getAttribute('aria-label')?.match(/(\d+:\d+)/);
-        if (ariaMatch) durationText = ariaMatch[1];
+    // Método 2: Busca em qualquer span dentro do overlay
+    if (!durationText) {
+      const overlaySpans = element.querySelectorAll('ytd-thumbnail-overlay-time-status-renderer span');
+      for (const span of overlaySpans) {
+        const text = span.textContent?.trim() || '';
+        if (text.match(/^\d+:\d+/)) {
+          durationText = text;
+          break;
+        }
+      }
+    }
+    
+    // Método 3: Busca em todo o texto do elemento
+    if (!durationText) {
+      const wholeText = element.textContent || '';
+      const timeMatch = wholeText.match(/\b(\d{1,2}:\d{2}(?::\d{2})?)\b/);
+      if (timeMatch) {
+        durationText = timeMatch[1];
       }
     }
     
     const duration = parseDuration(durationText || '0:00');
-    console.log(`[Filtros] Duração extraída: "${durationText}" = ${duration}s`);
+    if (durationText) {
+      console.log(`[Filtros] ✓ Duração: "${durationText}" = ${duration}s`);
+    } else {
+      console.log(`[Filtros] ⚠️ Duração não encontrada para: "${title.substring(0, 30)}..."`);
+    }
     
     // Canal
     const channelElement = element.querySelector('ytd-channel-name a') || 
@@ -672,6 +689,8 @@ function parseSubscriberText(text) {
 }
 
 function applyFilters() {
+  console.log('[Filtros] Aplicando filtros...', filters);
+  
   filteredVideos = allVideos.filter(video => {
     // Filtro de tipo de vídeo
     const hasTypeFilter = filters.showVideos || filters.showShorts || filters.showLive;
@@ -683,9 +702,17 @@ function applyFilters() {
       if (!typeMatches) return false;
     }
     
-    // Filtro de visualizações
-    if (video.views < filters.viewsMin || video.views > filters.viewsMax) {
-      return false;
+    // Filtro de visualizações (apenas se não estiver no valor máximo padrão)
+    if (filters.viewsMax < 100000000) {
+      if (video.views < filters.viewsMin || video.views > filters.viewsMax) {
+        console.log(`[Filtros] ✗ Vídeo filtrado por views: ${video.views} (range: ${filters.viewsMin}-${filters.viewsMax})`);
+        return false;
+      }
+    } else {
+      // Se está no máximo, só verifica o mínimo
+      if (video.views < filters.viewsMin) {
+        return false;
+      }
     }
     
     // Filtro de inscritos (apenas se o valor estiver disponível)
@@ -697,8 +724,17 @@ function applyFilters() {
     
     // Filtro de duração (converte para minutos)
     const durationMinutes = video.duration / 60;
-    if (durationMinutes < filters.durationMin || durationMinutes > filters.durationMax) {
-      return false;
+    
+    // Só aplica filtro de duração se não estiver nos valores padrão
+    if (filters.durationMax < 180) {
+      if (durationMinutes < filters.durationMin || durationMinutes > filters.durationMax) {
+        console.log(`[Filtros] ✗ Vídeo filtrado por duração: ${durationMinutes.toFixed(1)}min (range: ${filters.durationMin}-${filters.durationMax})`);
+        return false;
+      }
+    } else if (filters.durationMin > 0) {
+      if (durationMinutes < filters.durationMin) {
+        return false;
+      }
     }
     
     // Filtro de VPH
