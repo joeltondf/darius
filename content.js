@@ -223,38 +223,40 @@ async function captureVideos() {
   // Aguarda um pouco mais para garantir que o YouTube carregou
   await new Promise(resolve => setTimeout(resolve, 500));
   
-  // Tenta TODOS os seletores possíveis e combina os resultados
-  const selectors = [
-    'ytd-compact-video-renderer',           // Vídeos recomendados na watch page
-    'ytd-video-renderer',                   // Resultados de busca
-    'ytd-rich-item-renderer',               // Home/Canal
-    'ytd-grid-video-renderer',              // Grid de vídeos
-    'ytd-rich-grid-media',                  // Outro formato de grid
-    'ytd-playlist-panel-video-renderer',    // Playlist sidebar
-    'ytd-reel-item-renderer'                // Shorts
-  ];
-  
   let videoElements = [];
   
-  // Primeiro tenta buscar especificamente na área de vídeos recomendados (watch page)
-  const secondaryResults = document.querySelector('ytd-watch-next-secondary-results-renderer');
-  if (secondaryResults) {
-    console.log('[Filtros] ✓ Encontrou área de vídeos recomendados');
-    const compactVideos = secondaryResults.querySelectorAll('ytd-compact-video-renderer');
-    if (compactVideos.length > 0) {
-      console.log(`[Filtros] ✓ ytd-compact-video-renderer (área recomendados): ${compactVideos.length}`);
-      videoElements = [...videoElements, ...Array.from(compactVideos)];
-    }
+  // NOVA ABORDAGEM: Busca por links de vídeo (funciona com a estrutura atual do YouTube)
+  const videoLinks = document.querySelectorAll('a#video-title, a#video-title-link, a.yt-simple-endpoint[href*="/watch"]');
+  
+  console.log(`[Filtros] ✓ Encontrou ${videoLinks.length} links de vídeo na página`);
+  
+  if (videoLinks.length > 0) {
+    // Usa os links como base para os elementos de vídeo
+    videoElements = Array.from(videoLinks).map(link => {
+      // Encontra o container pai que tem todas as informações do vídeo
+      return link.closest('ytd-compact-video-renderer, ytd-video-renderer, ytd-rich-item-renderer, ytd-grid-video-renderer, ytd-rich-grid-media, ytd-playlist-panel-video-renderer, ytd-reel-item-renderer, div[class*="video"], div[id*="dismissible"]') || link;
+    }).filter(el => el);
   }
   
-  // Depois busca em toda a página com todos os seletores
-  for (const selector of selectors) {
-    const elements = document.querySelectorAll(selector);
-    if (elements.length > 0) {
-      console.log(`[Filtros] ✓ ${selector}: ${elements.length}`);
-      videoElements = [...videoElements, ...Array.from(elements)];
-    } else {
-      console.log(`[Filtros] ✗ ${selector}: 0`);
+  // Fallback: Tenta os seletores antigos
+  if (videoElements.length === 0) {
+    console.log('[Filtros] ⚠️ Tentando seletores antigos...');
+    const selectors = [
+      'ytd-compact-video-renderer',
+      'ytd-video-renderer',
+      'ytd-rich-item-renderer',
+      'ytd-grid-video-renderer',
+      'ytd-rich-grid-media',
+      'ytd-playlist-panel-video-renderer',
+      'ytd-reel-item-renderer'
+    ];
+    
+    for (const selector of selectors) {
+      const elements = document.querySelectorAll(selector);
+      if (elements.length > 0) {
+        console.log(`[Filtros] ✓ ${selector}: ${elements.length}`);
+        videoElements = [...videoElements, ...Array.from(elements)];
+      }
     }
   }
   
