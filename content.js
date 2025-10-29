@@ -251,16 +251,35 @@ async function captureVideos() {
   if (videoElements.length === 0 && window.location.pathname.includes('/watch')) {
     console.log('[Filtros] ⚠️ Watch page detectada - tentando métodos alternativos...');
     
-    // Espera mais 2 segundos
-    await new Promise(resolve => setTimeout(resolve, 2000));
+    // Espera mais 3 segundos
+    await new Promise(resolve => setTimeout(resolve, 3000));
+    
+    // Tenta buscar por qualquer elemento que tenha link de vídeo
+    console.log('[Filtros] 🔍 Buscando por qualquer estrutura de vídeo...');
     
     // Tenta novamente só os compact videos
     const compactVideos = document.querySelectorAll('ytd-compact-video-renderer');
+    console.log(`[Filtros] TENTATIVA 2 - ytd-compact-video-renderer: ${compactVideos.length}`);
+    
     if (compactVideos.length > 0) {
-      console.log(`[Filtros] ✓ SEGUNDO TENTE - ytd-compact-video-renderer: ${compactVideos.length}`);
       videoElements = Array.from(compactVideos);
     } else {
-      console.log('[Filtros] ✗ SEGUNDO TENTE - Ainda não encontrou vídeos');
+      // Busca em todo o documento por links de vídeo
+      const allVideoLinks = document.querySelectorAll('a[href*="/watch?v="]');
+      console.log(`[Filtros] TENTATIVA 3 - Links de vídeo encontrados: ${allVideoLinks.length}`);
+      
+      if (allVideoLinks.length > 0) {
+        // Pega os 20 primeiros containers únicos
+        const containers = new Set();
+        allVideoLinks.forEach(link => {
+          const container = link.closest('ytd-compact-video-renderer, ytd-video-renderer, div[id*="dismissible"]');
+          if (container && !containers.has(container)) {
+            containers.add(container);
+          }
+        });
+        videoElements = Array.from(containers);
+        console.log(`[Filtros] ✓ Containers únicos encontrados: ${videoElements.length}`);
+      }
     }
   }
   
