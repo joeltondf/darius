@@ -229,39 +229,37 @@ async function captureVideos() {
   if (window.location.pathname.includes('/watch')) {
     console.log('[Filtros] Watch page detectada');
     
-    // Tenta até 3 vezes com intervalos crescentes
-    const delays = [1500, 2000, 2500]; // Total: 6s
+    // Aguarda 3s para ytInitialData carregar
+    await new Promise(resolve => setTimeout(resolve, 3000));
     
-    for (let attempt = 0; attempt < delays.length; attempt++) {
-      await new Promise(resolve => setTimeout(resolve, delays[attempt]));
+    const ytData = window.ytInitialData;
+    
+    if (!ytData) {
+      console.log('[Filtros] ❌ ytInitialData não existe');
+      // Continua para busca normal no DOM
+    } else if (ytData.contents?.twoColumnWatchNextResults?.secondaryResults?.secondaryResults?.results) {
+      const results = ytData.contents.twoColumnWatchNextResults.secondaryResults.secondaryResults.results;
       
-      const ytData = window.ytInitialData;
+      console.log(`[Filtros] ✓ Encontrou ${results.length} vídeos em watch page`);
       
-      if (ytData?.contents?.twoColumnWatchNextResults?.secondaryResults?.secondaryResults?.results) {
-        const results = ytData.contents.twoColumnWatchNextResults.secondaryResults.secondaryResults.results;
-        
-        console.log(`[Filtros] Encontrou ${results.length} vídeos (tentativa ${attempt + 1})`);
-        
-        results.forEach(item => {
-          if (item.compactVideoRenderer) {
-            const video = extractVideoFromYtData(item.compactVideoRenderer);
-            if (video) {
-              allVideos.push(video);
-            }
+      results.forEach(item => {
+        if (item.compactVideoRenderer) {
+          const video = extractVideoFromYtData(item.compactVideoRenderer);
+          if (video) {
+            allVideos.push(video);
           }
-        });
-        
-        if (allVideos.length > 0) {
-          console.log(`[Filtros] Processou ${allVideos.length} vídeos com sucesso`);
-          updateVideoList();
-          return;
         }
-      }
+      });
       
-      console.log(`[Filtros] Tentativa ${attempt + 1} - nenhum vídeo encontrado`);
+      if (allVideos.length > 0) {
+        console.log(`[Filtros] ✓ Processou ${allVideos.length} vídeos`);
+        updateVideoList();
+        return;
+      }
+    } else {
+      console.log('[Filtros] ⚠️ ytInitialData existe mas estrutura diferente');
+      console.log('[Filtros] Chaves disponíveis:', Object.keys(ytData.contents || {}));
     }
-    
-    console.log('[Filtros] Watch page: nenhum vídeo encontrado após 3 tentativas');
   }
   
   // HOME/FEED/SEARCH: Busca normal no DOM
