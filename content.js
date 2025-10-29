@@ -225,94 +225,39 @@ async function captureVideos() {
   
   let videoElements = [];
   
-  // WATCH PAGE: Extrai dados de ytInitialData (shadow DOM não é acessível)
+  // WATCH PAGE: Extrai dados de ytInitialData
   if (window.location.pathname.includes('/watch')) {
-    console.log('[Filtros] 📺 Watch page detectada!');
-    console.log('[Filtros] URL completa:', window.location.href);
+    console.log('[Filtros] Watch page detectada');
     
     try {
+      // Aguarda 2s para garantir que ytInitialData carregou
+      await new Promise(resolve => setTimeout(resolve, 2000));
+      
       const ytData = window.ytInitialData;
-      console.log('[Filtros] ========== DEBUG ytInitialData ==========');
-      console.log('[Filtros] ytInitialData existe?', !!ytData);
       
-      if (!ytData) {
-        console.log('[Filtros] ❌ window.ytInitialData é NULL ou UNDEFINED');
-        console.log('[Filtros] Tentando aguardar 4 segundos...');
-        await new Promise(resolve => setTimeout(resolve, 4000));
-      }
-      
-      // Sempre pega a versão mais atual
-      const data = window.ytInitialData;
-      
-      if (!data) {
-        console.log('[Filtros] ❌ FALHA TOTAL - ytInitialData não disponível após 5.5s total');
-        console.log('[Filtros] Propriedades window com "yt":', Object.keys(window).filter(k => k.toLowerCase().includes('yt')));
-        return;
-      }
-      
-      // Debug completo da estrutura
-      console.log('[Filtros] Estrutura disponível:');
-      console.log('[Filtros] - contents:', !!data.contents);
-      
-      if (data.contents) {
-        console.log('[Filtros] - contents.twoColumnWatchNextResults:', !!data.contents.twoColumnWatchNextResults);
+      if (ytData?.contents?.twoColumnWatchNextResults?.secondaryResults?.secondaryResults?.results) {
+        const results = ytData.contents.twoColumnWatchNextResults.secondaryResults.secondaryResults.results;
         
-        if (data.contents.twoColumnWatchNextResults) {
-          console.log('[Filtros] - secondaryResults:', !!data.contents.twoColumnWatchNextResults.secondaryResults);
-          
-          if (data.contents.twoColumnWatchNextResults.secondaryResults) {
-            const sr = data.contents.twoColumnWatchNextResults.secondaryResults;
-            console.log('[Filtros] - secondaryResults.secondaryResults:', !!sr.secondaryResults);
-            
-            if (sr.secondaryResults) {
-              console.log('[Filtros] - secondaryResults.secondaryResults.results:', !!sr.secondaryResults.results);
-              
-              if (sr.secondaryResults.results) {
-                const results = sr.secondaryResults.results;
-                console.log(`[Filtros] ✅ SUCESSO! Encontrou ${results.length} itens`);
-                console.log('[Filtros] Primeiro item:', Object.keys(results[0] || {}));
-                
-                // Processa cada vídeo
-                results.forEach((item, index) => {
-                  if (item.compactVideoRenderer) {
-                    const video = extractVideoFromYtData(item.compactVideoRenderer);
-                    if (video) {
-                      allVideos.push(video);
-                    }
-                  } else if (item.continuationItemRenderer) {
-                    console.log(`[Filtros] Item #${index + 1}: continuationItemRenderer (ignorado)`);
-                  } else {
-                    console.log(`[Filtros] Item #${index + 1}: ${Object.keys(item)[0]}`);
-                  }
-                });
-                
-                console.log(`[Filtros] ✅ Total processado: ${allVideos.length} vídeos`);
-                updateVideoList();
-                return;
-              } else {
-                console.log('[Filtros] ❌ results não existe!');
-              }
-            } else {
-              console.log('[Filtros] ❌ secondaryResults.secondaryResults não existe!');
-              console.log('[Filtros] Chaves disponíveis:', Object.keys(sr));
+        console.log(`[Filtros] Encontrou ${results.length} vídeos recomendados`);
+        
+        results.forEach(item => {
+          if (item.compactVideoRenderer) {
+            const video = extractVideoFromYtData(item.compactVideoRenderer);
+            if (video) {
+              allVideos.push(video);
             }
-          } else {
-            console.log('[Filtros] ❌ secondaryResults não existe!');
           }
-        } else {
-          console.log('[Filtros] ❌ twoColumnWatchNextResults não existe!');
-          console.log('[Filtros] Chaves em contents:', Object.keys(data.contents));
-        }
+        });
+        
+        console.log(`[Filtros] Processou ${allVideos.length} vídeos`);
+        updateVideoList();
+        return;
       } else {
-        console.log('[Filtros] ❌ contents não existe!');
-        console.log('[Filtros] Chaves do ytInitialData:', Object.keys(data));
+        console.log('[Filtros] ytInitialData não disponível ou estrutura diferente');
+        console.log('[Filtros] Tentando buscar no DOM...');
       }
-      
-      console.log('[Filtros] ========================================');
-      
     } catch (error) {
-      console.log('[Filtros] ❌ ERRO CRÍTICO:', error.message);
-      console.log('[Filtros] Stack completo:', error.stack);
+      console.log('[Filtros] Erro ao processar watch page:', error.message);
     }
   }
   
@@ -403,45 +348,22 @@ function extractVideoFromYtData(data) {
     const publishDateText = data.publishedTimeText?.simpleText || 'Unknown';
     const publishDate = parsePublishDate(publishDateText);
     
-    // Duração - Extração simplificada e robusta
-    let durationText = '0:00';
-    let durationSeconds = 0;
-    let durationMethod = 'nenhum';
+    // Duração
+    let durationText = data.lengthText?.simpleText || '0:00';
     
-    // MÉTODO 1: lengthText.simpleText (formato "10:35")
-    if (data.lengthText?.simpleText) {
-      durationText = data.lengthText.simpleText;
-      durationSeconds = parseDuration(durationText);
-      durationMethod = 'lengthText.simpleText';
-    }
-    // MÉTODO 2: thumbnailOverlays
-    else if (data.thumbnailOverlays && Array.isArray(data.thumbnailOverlays)) {
+    // Se não tem em lengthText, tenta thumbnailOverlays
+    if (durationText === '0:00' && data.thumbnailOverlays) {
       for (const overlay of data.thumbnailOverlays) {
-        const timeStatus = overlay.thumbnailOverlayTimeStatusRenderer;
-        if (timeStatus?.text) {
-          if (timeStatus.text.simpleText) {
-            durationText = timeStatus.text.simpleText;
-            durationSeconds = parseDuration(durationText);
-            durationMethod = 'thumbnailOverlays.simpleText';
-            break;
-          } else if (timeStatus.text.runs?.[0]?.text) {
-            durationText = timeStatus.text.runs[0].text;
-            durationSeconds = parseDuration(durationText);
-            durationMethod = 'thumbnailOverlays.runs[0]';
-            break;
-          }
+        const timeText = overlay.thumbnailOverlayTimeStatusRenderer?.text?.simpleText ||
+                        overlay.thumbnailOverlayTimeStatusRenderer?.text?.runs?.[0]?.text;
+        if (timeText) {
+          durationText = timeText;
+          break;
         }
       }
     }
     
-    // Log debug apenas se não conseguiu extrair
-    if (durationSeconds === 0 || !durationText || durationText === '0:00') {
-      console.log(`[Filtros] ⚠️ Duração não extraída para "${title.substring(0, 30)}..."`);
-      console.log('[Filtros] data.lengthText:', data.lengthText);
-      console.log('[Filtros] data.thumbnailOverlays:', data.thumbnailOverlays);
-    }
-    
-    const duration = durationSeconds;
+    const duration = parseDuration(durationText);
     
     // Canal
     const channelName = data.longBylineText?.runs?.[0]?.text || data.shortBylineText?.runs?.[0]?.text || 'Unknown';
@@ -458,7 +380,6 @@ function extractVideoFromYtData(data) {
     // Tipo
     const type = determineVideoType(duration, url, null);
     
-    console.log(`[Filtros] ✓ Vídeo: "${title.substring(0, 35)}..." | Duração: ${durationText} (${duration}s via ${durationMethod}) | Views: ${formatNumber(views)} | VPH: ${formatNumber(vph)}`);
     
     return {
       title,
